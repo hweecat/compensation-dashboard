@@ -64,7 +64,7 @@ test("module app boots without legacy app.js fallback", async ({ page, url }) =>
   await resetPage(page, url);
   assert.equal(
     await page.locator("#scenarioName").inputValue(),
-    "Total Compensation Calculator - Growth Projection Cases",
+    "Sample Compensation Projection",
   );
   assert.equal(await page.locator("script[src='./src/standalone.js']").count(), 1);
   assert.equal(await page.locator("#summaryCards .summary-card").count(), 4);

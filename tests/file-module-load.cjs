@@ -22,7 +22,7 @@ const indexPath = path.resolve(__dirname, "../outputs/compensation-dashboard/ind
     assert.equal(await page.locator("#summaryCards .summary-card").count(), 4);
     assert.equal(
       await page.locator("#scenarioName").inputValue(),
-      "Total Compensation Calculator - Growth Projection Cases",
+      "Sample Compensation Projection",
     );
     assert.equal(await page.locator("#cashflowChart svg").count(), 1);
     assert.deepEqual(errors, []);
