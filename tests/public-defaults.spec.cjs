@@ -25,6 +25,7 @@ const publicDefaults = {
 const privateDefaults = {
   scenarioName: "Total Compensation Calculator - Growth Projection Cases",
   baseSalary: 220000,
+  bonusPercent: 20,
   signOnYear1: 50000,
   signOnYear2: 25000,
   rsuGrantValue: 420000,
