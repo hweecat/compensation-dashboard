@@ -1,0 +1,16 @@
+{
+  "name": "compensation-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Static compensation projection dashboard.",
+  "scripts": {
+    "build": "node tools/build-static.cjs",
+    "test": "node tests/public-defaults.spec.cjs && node tests/source-layout.spec.cjs && node tests/html-structure.spec.cjs && node tests/style-structure.spec.cjs && node tests/dashboard.spec.cjs && node tests/file-module-load.cjs",
+    "test:structure": "node tests/public-defaults.spec.cjs && node tests/source-layout.spec.cjs && node tests/html-structure.spec.cjs && node tests/style-structure.spec.cjs",
+    "test:browser": "node tests/dashboard.spec.cjs && node tests/file-module-load.cjs",
+    "postinstall": "playwright install chromium"
+  },
+  "devDependencies": {
+    "playwright": "1.60.0"
+  }
+}
