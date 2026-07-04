@@ -1,13 +1,12 @@
 const assert = require("node:assert/strict");
 const path = require("node:path");
 const { pathToFileURL } = require("node:url");
-const { chromium } = require("C:/Users/ongch/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/.pnpm/playwright-core@1.60.0/node_modules/playwright-core");
+const { chromium, browserLaunchOptions } = require("./helpers/playwright.cjs");
 
 const indexPath = path.resolve(__dirname, "../outputs/compensation-dashboard/index.html");
-const chromePath = "C:/Program Files/Google/Chrome/Application/chrome.exe";
 
 (async () => {
-  const browser = await chromium.launch({ headless: true, executablePath: chromePath });
+  const browser = await chromium.launch(browserLaunchOptions());
   try {
     const page = await browser.newPage({ viewport: { width: 1366, height: 900 } });
     const errors = [];

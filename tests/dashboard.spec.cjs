@@ -1,12 +1,11 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const { chromium } = require("C:/Users/ongch/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/.pnpm/playwright-core@1.60.0/node_modules/playwright-core");
 const { serveStatic } = require("./helpers/static-server.cjs");
+const { chromium, browserLaunchOptions } = require("./helpers/playwright.cjs");
 
 const appRoot = path.resolve(__dirname, "../outputs/compensation-dashboard");
 const indexHtmlPath = path.join(appRoot, "index.html");
-const chromePath = "C:/Program Files/Google/Chrome/Application/chrome.exe";
 
 const tests = [];
 
@@ -284,7 +283,7 @@ test("CSV and HTML exports include expected projection outputs", async ({ page, 
 
 (async () => {
   const staticServer = await serveStatic(appRoot);
-  const browser = await chromium.launch({ headless: true, executablePath: chromePath });
+  const browser = await chromium.launch(browserLaunchOptions());
   const failures = [];
 
   try {
