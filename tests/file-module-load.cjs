@@ -5,6 +5,30 @@ const { chromium, browserLaunchOptions } = require("./helpers/playwright.cjs");
 
 const indexPath = path.resolve(__dirname, "../outputs/compensation-dashboard/index.html");
 
+async function assertPublicDefaults(page) {
+  const expectedDefaults = {
+    "Base Salary": "120000",
+    "Bonus %": "10",
+    "Year 1 Amount": "10000",
+    "Year 2 Amount": "0",
+    "RSU Grant Value": "100000",
+    "Starting Price": "100",
+    "Equity Growth %": "5",
+    "Custom Schedule": "25:25:25:25",
+  };
+
+  assert.equal(await page.locator("#scenarioName").inputValue(), "Sample Compensation Projection");
+  for (const [label, value] of Object.entries(expectedDefaults)) {
+    const actual = await page.evaluate((fieldLabel) => {
+      const field = [...document.querySelectorAll("#assumptionControls .field")].find((node) =>
+        node.textContent.includes(fieldLabel),
+      );
+      return field?.querySelector("input, select")?.value ?? null;
+    }, label);
+    assert.equal(actual, value, `Expected public default for ${label}`);
+  }
+}
+
 (async () => {
   const browser = await chromium.launch(browserLaunchOptions());
   try {
@@ -20,10 +44,7 @@ const indexPath = path.resolve(__dirname, "../outputs/compensation-dashboard/ind
 
     assert.equal(await page.locator("script[src='./src/standalone.js']").count(), 1);
     assert.equal(await page.locator("#summaryCards .summary-card").count(), 4);
-    assert.equal(
-      await page.locator("#scenarioName").inputValue(),
-      "Sample Compensation Projection",
-    );
+    await assertPublicDefaults(page);
     assert.equal(await page.locator("#cashflowChart svg").count(), 1);
     assert.deepEqual(errors, []);
   } finally {

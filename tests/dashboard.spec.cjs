@@ -42,6 +42,30 @@ async function downloadText(page, buttonSelector) {
   return fs.readFileSync(await download.path(), "utf8");
 }
 
+async function assertPublicDefaults(page) {
+  const expectedDefaults = {
+    "Base Salary": "120000",
+    "Bonus %": "10",
+    "Year 1 Amount": "10000",
+    "Year 2 Amount": "0",
+    "RSU Grant Value": "100000",
+    "Starting Price": "100",
+    "Equity Growth %": "5",
+    "Custom Schedule": "25:25:25:25",
+  };
+
+  assert.equal(await page.locator("#scenarioName").inputValue(), "Sample Compensation Projection");
+  for (const [label, value] of Object.entries(expectedDefaults)) {
+    const actual = await page.evaluate((fieldLabel) => {
+      const field = [...document.querySelectorAll("#assumptionControls .field")].find((node) =>
+        node.textContent.includes(fieldLabel),
+      );
+      return field?.querySelector("input, select")?.value ?? null;
+    }, label);
+    assert.equal(actual, value, `Expected public default for ${label}`);
+  }
+}
+
 test("overview charts render core compensation components", async ({ page, url }) => {
   await resetPage(page, url);
 
@@ -62,10 +86,7 @@ test("module app boots without legacy app.js fallback", async ({ page, url }) =>
   assert.doesNotMatch(indexHtml, /app\.js/, "index.html should not depend on the legacy app.js runtime");
 
   await resetPage(page, url);
-  assert.equal(
-    await page.locator("#scenarioName").inputValue(),
-    "Sample Compensation Projection",
-  );
+  await assertPublicDefaults(page);
   assert.equal(await page.locator("script[src='./src/standalone.js']").count(), 1);
   assert.equal(await page.locator("#summaryCards .summary-card").count(), 4);
 });
