@@ -85,6 +85,25 @@ Core source areas:
 - `src/styles/*.css`: component CSS sources used to generate the static stylesheets.
 - `tools/build-static.cjs`: one-command generator for static HTML, CSS, and JS browser assets.
 
+## Deployment
+
+The static dashboard publishes from:
+
+- `outputs/compensation-dashboard/`
+
+GitHub Pages deployment is defined in:
+
+- `.github/workflows/deploy-pages.yml`
+
+The workflow runs on pushes to `main` and through manual dispatch. It installs Node.js and Python, regenerates the static dashboard, runs the regression tests, uploads `outputs/compensation-dashboard/` as the Pages artifact, and deploys to the default GitHub Pages URL for the repository. The exact published URL is shown in the successful deployment output.
+
+The checked-in defaults are public sample assumptions, not private compensation data. Before publishing new examples, run:
+
+```powershell
+npm run build
+npm test
+```
+
 ## Assumptions
 
 - Base salary can be entered as annual or monthly. Internally, monthly salary cashflow is derived from annualized salary.
