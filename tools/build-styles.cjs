@@ -18,7 +18,7 @@ if (!files.length) {
 }
 
 const stylesheet = files
-  .map((file) => fs.readFileSync(path.join(sourceRoot, file), "utf8").trimEnd())
+  .map((file) => fs.readFileSync(path.join(sourceRoot, file), "utf8").replace(/\r\n/g, "\n").trimEnd())
   .join("\n\n") + "\n";
 
 outputPaths.forEach((outputPath) => {

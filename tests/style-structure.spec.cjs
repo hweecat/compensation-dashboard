@@ -50,14 +50,14 @@ assert.deepEqual(
 
 const generatedCss = styleComponents
   .map(([file, section]) => {
-    const css = fs.readFileSync(path.join(sourceStyleRoot, file), "utf8").trimEnd();
+    const css = fs.readFileSync(path.join(sourceStyleRoot, file), "utf8").replace(/\r\n/g, "\n").trimEnd();
     assert.match(css, new RegExp(`^/\\* =+ ${section} =+ \\*/`), `${file} should start with the ${section} section header`);
     return css;
   })
   .join("\n\n") + "\n";
 
 stylePaths.forEach((stylePath) => {
-  const css = fs.readFileSync(stylePath, "utf8");
+  const css = fs.readFileSync(stylePath, "utf8").replace(/\r\n/g, "\n");
   styleComponents.forEach(([, section]) => {
     assert.match(css, new RegExp(`/\\* =+ ${section} =+ \\*/`), `${stylePath} should include a ${section} section`);
   });
@@ -69,7 +69,7 @@ stylePaths.forEach((stylePath) => {
 });
 
 assert.equal(
-  fs.readFileSync(stylePaths[0], "utf8"),
-  fs.readFileSync(stylePaths[1], "utf8"),
+  fs.readFileSync(stylePaths[0], "utf8").replace(/\r\n/g, "\n"),
+  fs.readFileSync(stylePaths[1], "utf8").replace(/\r\n/g, "\n"),
   "Root and output stylesheets should stay in sync",
 );
