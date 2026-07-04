@@ -1,0 +1,134 @@
+/* ===== Compensation Mix ===== */
+
+.mix-chart {
+  min-height: 320px;
+  display: grid;
+  place-items: center;
+  gap: 12px;
+}
+
+.mix-controls {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.inline-select {
+  width: 160px;
+}
+
+.mix-donut {
+  width: 190px;
+  aspect-ratio: 1;
+  overflow: visible;
+}
+
+.mix-segment {
+  cursor: pointer;
+  outline: none;
+  pointer-events: bounding-box;
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease,
+    filter 160ms ease;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.mix-segment:hover,
+.mix-segment:focus-visible {
+  filter: drop-shadow(0 8px 14px rgba(12, 33, 29, 0.18));
+  opacity: 0.9;
+  transform: scale(1.018);
+}
+
+.mix-segment.salary {
+  fill: var(--accent);
+}
+
+.mix-segment.bonus {
+  fill: var(--amber);
+}
+
+.mix-segment.signon {
+  fill: var(--blue);
+}
+
+.mix-segment.equity {
+  fill: #155f50;
+}
+
+.mix-donut-hole {
+  fill: var(--surface);
+  pointer-events: none;
+}
+
+.mix-detail-label {
+  min-height: 34px;
+  width: min(100%, 280px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #f8fbfa;
+  color: var(--text);
+  display: grid;
+  place-items: center;
+  padding: 8px 10px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.legend {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+}
+
+.legend-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.legend-row strong {
+  display: grid;
+  gap: 2px;
+  justify-items: end;
+  color: var(--text);
+  text-align: right;
+}
+
+.mix-percent {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.legend-row span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.dot.bonus {
+  background: var(--amber);
+}
+
+.dot.signon {
+  background: var(--blue);
+}
+
+.dot.equity {
+  background: #155f50;
+}

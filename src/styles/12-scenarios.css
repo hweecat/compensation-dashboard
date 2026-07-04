@@ -1,0 +1,47 @@
+/* ===== Scenarios ===== */
+
+.stat-stack,
+.scenario-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.stat-row,
+.scenario-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fbfcfc;
+}
+
+.stat-row span,
+.scenario-row span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.stat-row strong,
+.scenario-row strong {
+  font-size: 14px;
+}
+
+.scenario-table-wrap {
+  margin-top: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+#scenarioYearTable {
+  min-width: 760px;
+}
+
+.notes-list {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.8;
+}

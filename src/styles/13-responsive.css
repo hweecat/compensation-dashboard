@@ -1,0 +1,66 @@
+/* ===== Responsive ===== */
+
+@media (max-width: 1180px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .assumptions-panel {
+    position: static;
+  }
+
+  .field-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 860px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .nav-rail {
+    position: static;
+    width: 100%;
+    height: auto;
+    flex-direction: row;
+    justify-content: center;
+    padding: 10px;
+  }
+
+  .brand-mark {
+    margin: 0 auto 0 0;
+  }
+
+  .workspace {
+    padding: 14px;
+  }
+
+  .topbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .scenario-name {
+    width: 100%;
+    font-size: 24px;
+  }
+
+  .topbar-actions {
+    justify-content: space-between;
+  }
+
+  .summary-grid,
+  .chart-layout,
+  .field-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tab-strip {
+    overflow-x: auto;
+  }
+
+  .chart-box {
+    height: 270px;
+  }
+}

@@ -1,0 +1,10 @@
+.worktrees/
+node_modules/
+npm-debug.log*
+playwright-report/
+test-results/
+.cache/
+.DS_Store
+Thumbs.db
+*.pyc
+__pycache__/

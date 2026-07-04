@@ -1,0 +1,40 @@
+/* ===== Tabs ===== */
+
+.main-panel {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.tab-strip {
+  display: flex;
+  gap: 4px;
+  padding: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.tab-button {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.tab-button.is-active {
+  background: #13201c;
+  color: #ffffff;
+}
+
+.tab-panel {
+  display: none;
+  padding: 16px;
+}
+
+.tab-panel.is-active {
+  display: grid;
+  gap: 16px;
+}

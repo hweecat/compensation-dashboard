@@ -1,0 +1,286 @@
+/* ===== Charts ===== */
+
+.chart-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(260px, 0.85fr);
+  gap: 16px;
+}
+
+.span-2 {
+  min-width: 0;
+}
+
+.panel {
+  padding: 16px;
+  box-shadow: none;
+}
+
+.panel-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.panel-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.zoom-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.zoom-label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  min-width: 58px;
+  text-align: center;
+}
+
+.fit-button {
+  min-height: 32px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--accent-dark);
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.fit-button:hover,
+.fit-button:focus {
+  border-color: rgba(0, 121, 106, 0.35);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  outline: none;
+}
+
+.metric-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: var(--radius);
+  background: var(--green-soft);
+  color: var(--accent-dark);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.chart-box {
+  position: relative;
+  height: 320px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior: contain;
+  cursor: crosshair;
+  user-select: none;
+}
+
+.chart-box:focus {
+  outline: 2px solid rgba(0, 121, 106, 0.28);
+  outline-offset: 3px;
+}
+
+.cashflow-window-panel {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #f8fbfa;
+}
+
+.cashflow-window-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.cashflow-window-overview {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(2px, 1fr);
+  align-items: end;
+  height: 42px;
+  gap: 1px;
+  padding: 4px 0;
+}
+
+.cashflow-window-bar {
+  align-self: end;
+  min-height: 3px;
+  border-radius: 2px 2px 0 0;
+  background: #bfd5cf;
+}
+
+.cashflow-window-bar.is-selected {
+  background: var(--accent);
+}
+
+.cashflow-window-ranges {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.cashflow-window-ranges label {
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.cashflow-window-ranges input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.component-filter-bar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: -2px 0 10px;
+}
+
+.component-filter {
+  min-height: 30px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.component-filter::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 7px;
+  background: var(--accent);
+}
+
+.component-filter.bonus::before {
+  background: var(--amber);
+}
+
+.component-filter.signon::before {
+  background: var(--blue);
+}
+
+.component-filter.equity::before {
+  background: #155f50;
+}
+
+.component-filter.is-muted {
+  color: var(--muted);
+  background: #f7faf9;
+  text-decoration: line-through;
+}
+
+.chart-box svg {
+  width: max(100%, var(--chart-min-width, 100%));
+  height: 100%;
+}
+
+.zoom-drag-rect,
+.zoom-selection {
+  position: absolute;
+  top: 18px;
+  bottom: 34px;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  background: rgba(0, 121, 106, 0.14);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.axis text,
+.chart-label {
+  fill: var(--muted);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.grid-line {
+  stroke: #e8efec;
+  stroke-width: 1;
+}
+
+.salary-fill {
+  fill: #77b7a9;
+}
+
+.bonus-fill {
+  fill: #d9a34a;
+}
+
+.signon-fill {
+  fill: #4779a8;
+}
+
+.equity-fill {
+  fill: #155f50;
+}
+
+.line-stroke,
+.equity-line {
+  fill: none;
+  stroke: #155f50;
+  stroke-width: 3;
+}
+
+.equity-point {
+  fill: #155f50;
+  stroke: var(--surface);
+  stroke-width: 2;
+  cursor: pointer;
+}
+
+.equity-point:hover,
+.equity-point:focus {
+  fill: var(--accent);
+  outline: none;
+}
+
+.equity-point-hit {
+  fill: transparent;
+  pointer-events: all;
+  cursor: pointer;
+}
+
+.chart-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #f8fbfa;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}

@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Compensation Projection Dashboard</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <aside class="nav-rail" aria-label="Dashboard navigation">
+        <div class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M7 21.5 14.2 9l4.2 7.4 2.4-4.1L25 19.5" /><path d="M6 24.5h20" /></svg></div>
+        <button class="rail-item is-active" data-tab="overview" aria-label="Overview"><svg viewBox="0 0 24 24"><path d="M4 13h6V4H4v9Zm10 7h6V4h-6v16ZM4 20h6v-4H4v4Z" /></svg></button>
+        <button class="rail-item" data-tab="cashflow" aria-label="Cashflow"><svg viewBox="0 0 24 24"><path d="M4 19V5m0 14h16M7 15l3-4 3 2 4-7 3 4" /></svg></button>
+        <button class="rail-item" data-tab="equity" aria-label="Equity"><svg viewBox="0 0 24 24"><path d="M12 3 4 8l8 5 8-5-8-5Zm-8 9 8 5 8-5M4 16l8 5 8-5" /></svg></button>
+        <button class="rail-item" data-tab="scenarios" aria-label="Scenarios"><svg viewBox="0 0 24 24"><path d="M5 6h14M5 12h14M5 18h14" /><path d="M8 4v4M16 10v4M11 16v4" /></svg></button>
+      </aside>
+      <section class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="screen-label">Compensation Projection</p>
+            <input id="scenarioName" class="scenario-name" type="text" aria-label="Scenario name" />
+          </div>
+          <div class="topbar-actions">
+            <button class="icon-button" id="resetButton" aria-label="Reset assumptions" title="Reset assumptions"><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.3-5.7L4 8.6" /><path d="M4 4v4.6h4.6" /></svg></button>
+            <button class="primary-action" id="exportButton">
+              <svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 20h14" /></svg>
+              Export CSV
+            </button>
+            <button class="secondary-action" id="exportReportButton">
+              <svg viewBox="0 0 24 24"><path d="M7 3h7l5 5v13H7z" /><path d="M14 3v5h5M10 13h6M10 17h6" /></svg>
+              Export Report
+            </button>
+          </div>
+        </header>
+        <div class="dashboard-grid">
+          <aside class="assumptions-panel" aria-label="Projection assumptions">
+            <div class="panel-heading">
+              <h2>Assumptions</h2>
+              <p id="periodLabel"></p>
+            </div>
+            <div id="assumptionControls" class="control-stack"></div>
+          </aside>
+          <section class="main-panel">
+            <nav class="tab-strip" aria-label="Dashboard sections">
+              <button class="tab-button is-active" data-tab="overview">Overview</button>
+              <button class="tab-button" data-tab="cashflow">Cashflow</button>
+              <button class="tab-button" data-tab="equity">Equity</button>
+              <button class="tab-button" data-tab="scenarios">Scenarios</button>
+            </nav>
+            <section id="overview" class="tab-panel is-active">
+              <div id="summaryCards" class="summary-grid"></div>
+              <div class="chart-layout">
+                <article class="panel span-2">
+                  <div class="panel-title-row">
+                    <div>
+                      <h2 id="cashflowChartTitle">Compensation Cashflow</h2>
+                      <p id="cashflowChartSubtitle">Stacked by salary, bonus, sign-on, and vested equity value.</p>
+                    </div>
+                    <div class="panel-actions">
+                      <div class="zoom-controls" aria-label="Cashflow chart zoom controls">
+                        <button class="icon-button mini" type="button" data-cashflow-zoom="out" aria-label="Zoom out" title="Zoom out">-</button>
+                        <span id="cashflowZoomLabel" class="zoom-label">Zoom 1x</span>
+                        <button class="icon-button mini" type="button" data-cashflow-zoom="in" aria-label="Zoom in" title="Zoom in">+</button>
+                        <button class="fit-button" type="button" data-cashflow-zoom-reset aria-label="Reset zoom to fit window" title="Reset zoom to fit window">Fit</button>
+                      </div>
+                      <div class="segmented compact" aria-label="Overview cashflow view">
+                        <button type="button" data-overview-cashflow-view="monthly">Monthly</button>
+                        <button type="button" data-overview-cashflow-view="annual">Annual</button>
+                      </div>
+                      <button class="toggle-chip" type="button" data-overview-cumulative>Cumulative</button>
+                      <div id="peakBadge" class="metric-badge"></div>
+                    </div>
+                  </div>
+                  <div class="component-filter-bar" aria-label="Cashflow component filters">
+                    <button class="component-filter salary" type="button" data-cashflow-component="salary">Salary</button>
+                    <button class="component-filter bonus" type="button" data-cashflow-component="bonus">Bonus</button>
+                    <button class="component-filter signon" type="button" data-cashflow-component="signOn">Sign-on bonuses</button>
+                    <button class="component-filter equity" type="button" data-cashflow-component="equityValue">Equity</button>
+                  </div>
+                  <div id="cashflowChart" class="chart-box" tabindex="0" aria-label="Compensation cashflow chart" title="Drag to select a range, or scroll over chart to zoom"></div>
+                  <div class="cashflow-window-panel" aria-label="Cashflow zoom pane">
+                    <div class="cashflow-window-header">
+                      <span>Zoom pane</span>
+                      <span id="cashflowWindowLabel">Selected: All periods</span>
+                    </div>
+                    <div id="cashflowWindowOverview" class="cashflow-window-overview" aria-hidden="true"></div>
+                    <div class="cashflow-window-ranges">
+                      <label>
+                        Start
+                        <input id="cashflowWindowStart" type="range" min="0" max="47" step="1" value="0" />
+                      </label>
+                      <label>
+                        End
+                        <input id="cashflowWindowEnd" type="range" min="1" max="48" step="1" value="48" />
+                      </label>
+                    </div>
+                  </div>
+                </article>
+                <article class="panel">
+                  <div class="panel-title-row">
+                    <div>
+                      <h2>Compensation Mix</h2>
+                      <p id="mixPeriodLabel">Projected total over the horizon.</p>
+                    </div>
+                  </div>
+                  <div id="mixChart" class="mix-chart"></div>
+                </article>
+              </div>
+              <article class="panel">
+                <div class="panel-title-row">
+                  <div>
+                    <h2>Next Vesting Events</h2>
+                    <p>Near-term equity value at projected share price.</p>
+                  </div>
+                </div>
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Vesting Date</th>
+                        <th>Shares Vesting</th>
+                        <th>Projected Price</th>
+                        <th>Vested Value</th>
+                        <th>Cumulative Vested</th>
+                      </tr>
+                    </thead>
+                    <tbody id="vestingPreview"></tbody>
+                  </table>
+                </div>
+              </article>
+            </section>
+            <section id="cashflow" class="tab-panel">
+              <article class="panel">
+                <div class="panel-title-row">
+                  <div>
+                    <h2 id="cashflowDetailTitle">Monthly Detail</h2>
+                    <p id="cashflowDetailSubtitle">Each month in the selected projection horizon.</p>
+                  </div>
+                  <div class="panel-actions">
+                    <div class="segmented compact" aria-label="Cashflow detail view">
+                      <button type="button" data-detail-cashflow-view="monthly">Monthly</button>
+                      <button type="button" data-detail-cashflow-view="annual">Annual</button>
+                    </div>
+                    <button class="toggle-chip" type="button" data-detail-cumulative>Cumulative</button>
+                    <div id="cashflowTotal" class="metric-badge"></div>
+                  </div>
+                </div>
+                <div class="table-wrap tall">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Month</th>
+                        <th>Salary</th>
+                        <th>Bonus</th>
+                        <th>Sign-on</th>
+                        <th>Equity Value</th>
+                        <th>Total</th>
+                      </tr>
+                    </thead>
+                    <tbody id="cashflowRows"></tbody>
+                    <tfoot id="cashflowSubtotal"></tfoot>
+                  </table>
+                </div>
+              </article>
+            </section>
+            <section id="equity" class="tab-panel">
+              <div class="chart-layout">
+                <article class="panel span-2">
+                  <div class="panel-title-row">
+                    <div>
+                      <h2>Equity Valuation Growth</h2>
+                      <p>Vested equity value compounds from the assumed starting share price.</p>
+                    </div>
+                    <div class="panel-actions">
+                      <div class="zoom-controls" aria-label="Equity chart zoom controls">
+                        <button class="icon-button mini" type="button" data-equity-zoom="out" aria-label="Zoom out" title="Zoom out">-</button>
+                        <span id="equityZoomLabel" class="zoom-label">Zoom 1x</span>
+                        <button class="icon-button mini" type="button" data-equity-zoom="in" aria-label="Zoom in" title="Zoom in">+</button>
+                        <button class="fit-button" type="button" data-equity-zoom-reset aria-label="Reset zoom to fit window" title="Reset zoom to fit window">Fit</button>
+                      </div>
+                    </div>
+                  </div>
+                  <div id="equityChart" class="chart-box" tabindex="0" aria-label="Equity valuation growth chart" title="Drag to select a range, or scroll over chart to zoom"></div>
+                  <div class="cashflow-window-panel" aria-label="Equity zoom pane">
+                    <div class="cashflow-window-header">
+                      <span>Zoom pane</span>
+                      <span id="equityWindowLabel">Selected: All months</span>
+                    </div>
+                    <div id="equityWindowOverview" class="cashflow-window-overview" aria-hidden="true"></div>
+                    <div class="cashflow-window-ranges">
+                      <label>
+                        Start
+                        <input id="equityWindowStart" type="range" min="0" max="47" step="1" value="0" />
+                      </label>
+                      <label>
+                        End
+                        <input id="equityWindowEnd" type="range" min="1" max="48" step="1" value="48" />
+                      </label>
+                    </div>
+                  </div>
+                  <div class="chart-detail-row"><span id="equityPointDetail">Select a point to inspect vested value and cumulative equity.</span></div>
+                </article>
+                <article class="panel">
+                  <div class="panel-title-row">
+                    <div>
+                      <h2>Grant Snapshot</h2>
+                      <p>Shares implied by the current RSU grant assumptions.</p>
+                    </div>
+                  </div>
+                  <div id="equityStats" class="stat-stack"></div>
+                </article>
+              </div>
+              <article class="panel">
+                <div class="panel-title-row">
+                  <div>
+                    <h2>Full Vesting Schedule</h2>
+                    <p>All vesting dates through the projection horizon.</p>
+                  </div>
+                </div>
+                <div class="table-wrap tall">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Vesting Date</th>
+                        <th>Shares</th>
+                        <th>Projected Price</th>
+                        <th>Vested Value</th>
+                        <th>Cumulative Value</th>
+                      </tr>
+                    </thead>
+                    <tbody id="vestingRows"></tbody>
+                  </table>
+                </div>
+              </article>
+            </section>
+            <section id="scenarios" class="tab-panel">
+              <article class="panel">
+                <div class="panel-title-row">
+                  <div>
+                    <h2>Scenario Sensitivity</h2>
+                    <p>How valuation growth changes total projected compensation.</p>
+                  </div>
+                </div>
+                <div id="scenarioGrid" class="scenario-grid"></div>
+                <div class="table-wrap scenario-table-wrap">
+                  <table id="scenarioYearTable">
+                    <thead id="scenarioYearHead"></thead>
+                    <tbody id="scenarioYearRows"></tbody>
+                  </table>
+                </div>
+              </article>
+              <article class="panel">
+                <div class="panel-title-row">
+                  <div>
+                    <h2>Model Notes</h2>
+                    <p>Assumptions used by this dashboard.</p>
+                  </div>
+                </div>
+                <ul class="notes-list">
+                  <li>Base salary can be entered as an annual or monthly amount and is paid monthly in the projection.</li>
+                  <li>Bonus is paid once per year in the selected payout month.</li>
+                  <li>Year 1 and Year 2 sign-on bonuses can pay as a lump sum or over monthly instalments.</li>
+                  <li>RSU shares are implied from grant value divided by starting share price.</li>
+                  <li>Equity vests only after each completed vesting period, using exact anniversary dates from the start date.</li>
+                  <li>Custom vesting schedules such as 5:15:45:35 or 22:66:195:151 are normalized as year-by-year grant weights.</li>
+                  <li>Event-based custom schedules such as 30:98,36:97,42:76,48:75 vest exact units at completed months.</li>
+                  <li>Cash and equity can use different source currencies; dashboard totals use the selected reporting currency.</li>
+                  <li>Equity valuation grows monthly from the selected annual growth assumption.</li>
+                </ul>
+              </article>
+            </section>
+          </section>
+        </div>
+      </section>
+    </main>
+    <script src="./src/standalone.js"></script>
+  </body>
+</html>
