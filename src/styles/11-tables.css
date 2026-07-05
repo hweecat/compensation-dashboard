@@ -2,6 +2,8 @@
 
 .table-wrap {
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   overflow: auto;
 }
 
@@ -52,4 +54,88 @@ tfoot td {
   background: #f7fbf9;
   border-top: 2px solid var(--line-strong);
   font-weight: 850;
+}
+
+@media (max-width: 520px) {
+  .table-wrap {
+    overflow: visible;
+  }
+
+  table {
+    display: block;
+    min-width: 0;
+    width: 100%;
+    font-size: 13px;
+  }
+
+  #scenarioYearTable {
+    min-width: 0;
+  }
+
+  thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  tbody,
+  tfoot {
+    display: grid;
+    gap: 10px;
+  }
+
+  tr {
+    display: grid;
+    gap: 0;
+    padding: 6px 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: #fbfcfc;
+  }
+
+  td {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 14px;
+    min-width: 0;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--line);
+    text-align: right;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  td:first-child {
+    text-align: right;
+  }
+
+  td:last-child {
+    border-bottom: 0;
+  }
+
+  td::before {
+    content: attr(data-label);
+    flex: 0 0 auto;
+    max-width: 46%;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 800;
+    text-align: left;
+    text-transform: uppercase;
+  }
+
+  tfoot td {
+    position: static;
+    background: transparent;
+    border-top: 0;
+  }
+
+  tfoot tr {
+    background: #f7fbf9;
+    border-color: var(--line-strong);
+  }
 }

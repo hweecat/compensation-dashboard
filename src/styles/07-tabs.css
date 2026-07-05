@@ -32,9 +32,16 @@
 .tab-panel {
   display: none;
   padding: 16px;
+  min-width: 0;
 }
 
 .tab-panel.is-active {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
+}
+
+.tab-panel > * {
+  min-width: 0;
+  max-width: 100%;
 }

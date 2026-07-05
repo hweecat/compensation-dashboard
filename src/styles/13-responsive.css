@@ -69,7 +69,7 @@
   .summary-grid,
   .chart-layout,
   .field-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .tab-strip {
@@ -150,6 +150,14 @@
     justify-content: flex-start;
   }
 
+  .panel-actions > * {
+    min-width: 0;
+  }
+
+  .metric-badge {
+    white-space: normal;
+  }
+
   .chart-box {
     height: 240px;
   }
@@ -159,12 +167,16 @@
   }
 
   .table-wrap {
-    margin-right: -12px;
-    padding-right: 12px;
+    margin-right: 0;
+    padding-right: 0;
   }
 
   .table-wrap.tall {
     max-height: 460px;
+  }
+
+  #scenarioYearTable {
+    min-width: 0;
   }
 
   th,
@@ -176,6 +188,15 @@
     right: 8px;
     left: 8px;
     gap: 8px;
+  }
+
+  .scenario-row {
+    display: grid;
+    gap: 6px;
+  }
+
+  .scenario-row strong {
+    text-align: left;
   }
 }
 

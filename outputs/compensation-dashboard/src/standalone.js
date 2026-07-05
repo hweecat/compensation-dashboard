@@ -1095,11 +1095,11 @@ function renderTables(state, defaults, model) {
       .map(
         (row) => `
         <tr>
-          <td>${row.vestingDate}</td>
-          <td>${numberFormatter.format(row.sharesVested)}</td>
-          <td>${money(state, row.projectedSharePrice, state.equityCurrency)}</td>
-          <td>${money(state, row.equityValue)}</td>
-          <td>${money(state, row.cumulativeEquityValue)}</td>
+          <td data-label="Vesting Date">${row.vestingDate}</td>
+          <td data-label="Shares Vesting">${numberFormatter.format(row.sharesVested)}</td>
+          <td data-label="Projected Price">${money(state, row.projectedSharePrice, state.equityCurrency)}</td>
+          <td data-label="Equity Value">${money(state, row.equityValue)}</td>
+          <td data-label="Cumulative Equity">${money(state, row.cumulativeEquityValue)}</td>
         </tr>
       `,
       )
@@ -1111,24 +1111,24 @@ function renderTables(state, defaults, model) {
     .map(
       (row) => `
       <tr>
-        <td>${row.detailLabel}</td>
-        <td>${money(state, row.salary)}</td>
-        <td>${money(state, row.bonus)}</td>
-        <td>${money(state, row.signOn)}</td>
-        <td>${money(state, row.equityValue)}</td>
-        <td>${money(state, row.total)}</td>
+        <td data-label="${state.detailCashflowView === "annual" ? "Year" : "Month"}">${row.detailLabel}</td>
+        <td data-label="Salary">${money(state, row.salary)}</td>
+        <td data-label="Bonus">${money(state, row.bonus)}</td>
+        <td data-label="Sign-on">${money(state, row.signOn)}</td>
+        <td data-label="Equity">${money(state, row.equityValue)}</td>
+        <td data-label="Total">${money(state, row.total)}</td>
       </tr>
     `,
     )
     .join("");
   document.getElementById("cashflowSubtotal").innerHTML = `
     <tr>
-      <td>Subtotal</td>
-      <td>${money(state, cashSubtotals.salary)}</td>
-      <td>${money(state, cashSubtotals.bonus)}</td>
-      <td>${money(state, cashSubtotals.signOn)}</td>
-      <td>${money(state, cashSubtotals.equity)}</td>
-      <td>${money(state, cashSubtotals.total)}</td>
+      <td data-label="Summary">Subtotal</td>
+      <td data-label="Salary">${money(state, cashSubtotals.salary)}</td>
+      <td data-label="Bonus">${money(state, cashSubtotals.bonus)}</td>
+      <td data-label="Sign-on">${money(state, cashSubtotals.signOn)}</td>
+      <td data-label="Equity">${money(state, cashSubtotals.equity)}</td>
+      <td data-label="Total">${money(state, cashSubtotals.total)}</td>
     </tr>
   `;
 }
@@ -1181,9 +1181,12 @@ function renderScenarios(state, defaults) {
     .map(
       (item) => `
       <tr>
-        <td>${item.growth}%</td>
-        ${Array.from({ length: yearCount }, (_, index) => `<td>${money(state, item.annualRows[index]?.total || 0)}</td>`).join("")}
-        <td>${money(state, item.total)}</td>
+        <td data-label="Growth">${item.growth}%</td>
+        ${Array.from(
+          { length: yearCount },
+          (_, index) => `<td data-label="Year ${index + 1}">${money(state, item.annualRows[index]?.total || 0)}</td>`,
+        ).join("")}
+        <td data-label="Total">${money(state, item.total)}</td>
       </tr>
     `,
     )

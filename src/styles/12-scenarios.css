@@ -11,6 +11,7 @@
   display: flex;
   justify-content: space-between;
   gap: 16px;
+  min-width: 0;
   padding: 12px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -19,17 +20,24 @@
 
 .stat-row span,
 .scenario-row span {
+  min-width: 0;
   color: var(--muted);
   font-size: 13px;
+  overflow-wrap: anywhere;
 }
 
 .stat-row strong,
 .scenario-row strong {
+  min-width: 0;
   font-size: 14px;
+  text-align: right;
+  overflow-wrap: anywhere;
 }
 
 .scenario-table-wrap {
   margin-top: 14px;
+  min-width: 0;
+  max-width: 100%;
   border: 1px solid var(--line);
   border-radius: var(--radius);
 }

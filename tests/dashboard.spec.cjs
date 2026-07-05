@@ -107,6 +107,7 @@ test("mobile and tablet layouts use bottom navigation without page-level overflo
       const nav = document.querySelector(".nav-rail");
       const workspace = document.querySelector(".workspace");
       const firstTableWrap = document.querySelector(".table-wrap");
+      const firstTable = firstTableWrap.querySelector("table");
       const navStyle = getComputedStyle(nav);
       const workspaceStyle = getComputedStyle(workspace);
       return {
@@ -122,6 +123,7 @@ test("mobile and tablet layouts use bottom navigation without page-level overflo
         workspacePaddingBottom: parseFloat(workspaceStyle.paddingBottom),
         summaryColumns: getComputedStyle(document.querySelector("#summaryCards")).gridTemplateColumns.split(" ").length,
         cashflowTableScrollable: firstTableWrap.scrollWidth > firstTableWrap.clientWidth,
+        tableDisplay: getComputedStyle(firstTable).display,
       };
     });
 
@@ -139,13 +141,141 @@ test("mobile and tablet layouts use bottom navigation without page-level overflo
     );
     if (viewport.width <= 430) {
       assert.equal(layout.summaryColumns, 2);
-      assert.equal(layout.cashflowTableScrollable, true);
+      assert.equal(layout.tableDisplay, "block");
+      assert.equal(layout.cashflowTableScrollable, false);
     }
     assert.ok(
       layout.documentWidth <= layout.viewportWidth + 1,
       `Expected no document overflow at ${viewport.width}px, got ${layout.documentWidth}`,
     );
     assert.ok(layout.bodyWidth <= layout.viewportWidth + 1, `Expected no body overflow at ${viewport.width}px, got ${layout.bodyWidth}`);
+  }
+});
+
+test("mobile active tab content fits and phone tables render as labeled cards", async ({ page, url }) => {
+  const viewports = [
+    { width: 360, height: 800 },
+    { width: 390, height: 844 },
+    { width: 430, height: 932 },
+    { width: 768, height: 1024 },
+  ];
+  const tabs = ["overview", "cashflow", "equity", "scenarios"];
+
+  for (const viewport of viewports) {
+    await page.setViewportSize(viewport);
+    await resetPage(page, url);
+
+    for (const tabName of tabs) {
+      await clickUnique(page, `.rail-item[data-tab='${tabName}']`);
+      const layout = await page.evaluate((activeTabName) => {
+        const main = document.querySelector(".main-panel");
+        const activePanel = document.querySelector(".tab-panel.is-active");
+        const mainRect = main.getBoundingClientRect();
+        const activeRect = activePanel.getBoundingClientRect();
+        const activeChildren = [...activePanel.children].filter((child) => {
+          const rect = child.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0;
+        });
+        const overflowingChildren = activeChildren
+          .filter((child) => {
+            const rect = child.getBoundingClientRect();
+            return rect.left < mainRect.left - 1 || rect.right > mainRect.right + 1;
+          })
+          .map((child) => ({
+            tag: child.tagName.toLowerCase(),
+            className: child.className,
+            left: Math.round(child.getBoundingClientRect().left),
+            right: Math.round(child.getBoundingClientRect().right),
+            mainLeft: Math.round(mainRect.left),
+            mainRight: Math.round(mainRect.right),
+          }));
+        const scenarioRows = [...document.querySelectorAll("#scenarios .scenario-row")].map((row) => {
+          const rect = row.getBoundingClientRect();
+          return {
+            text: row.textContent.trim().replace(/\s+/g, " "),
+            left: Math.round(rect.left),
+            right: Math.round(rect.right),
+            width: Math.round(rect.width),
+            hasValue: Boolean(row.querySelector("strong")?.textContent.trim()),
+            outsideMain: rect.left < mainRect.left - 1 || rect.right > mainRect.right + 1,
+          };
+        });
+        const firstVisibleTable = activePanel.querySelector(".table-wrap table");
+        const tableDisplay = firstVisibleTable ? getComputedStyle(firstVisibleTable).display : null;
+        const labeledCells = [...activePanel.querySelectorAll("tbody tr:first-child td, tfoot tr:first-child td")].map((cell) =>
+          cell.getAttribute("data-label"),
+        );
+        return {
+          activeTabName,
+          mainClientWidth: main.clientWidth,
+          mainScrollWidth: main.scrollWidth,
+          activeClientWidth: activePanel.clientWidth,
+          activeScrollWidth: activePanel.scrollWidth,
+          activeLeft: Math.round(activeRect.left),
+          activeRight: Math.round(activeRect.right),
+          mainLeft: Math.round(mainRect.left),
+          mainRight: Math.round(mainRect.right),
+          overflowingChildren,
+          scenarioRows,
+          tableDisplay,
+          labeledCells,
+        };
+      }, tabName);
+
+      assert.ok(
+        layout.mainScrollWidth <= layout.mainClientWidth + 1,
+        `${tabName} main panel should not hide horizontal overflow at ${viewport.width}px: ${JSON.stringify(layout)}`,
+      );
+      assert.ok(
+        layout.activeScrollWidth <= layout.activeClientWidth + 1,
+        `${tabName} active tab should fit its grid track at ${viewport.width}px: ${JSON.stringify(layout)}`,
+      );
+      assert.deepEqual(
+        layout.overflowingChildren,
+        [],
+        `${tabName} active tab children should stay within main panel at ${viewport.width}px`,
+      );
+
+      if (tabName === "scenarios") {
+        assert.ok(layout.scenarioRows.length > 0, "Expected scenario summary rows");
+        assert.deepEqual(
+          layout.scenarioRows.filter((row) => row.outsideMain),
+          [],
+          `Expected scenario rows to fit the main panel at ${viewport.width}px`,
+        );
+        assert.ok(layout.scenarioRows.every((row) => row.hasValue), "Expected each scenario row to show its projected value");
+      }
+
+      if (viewport.width <= 520 && ["overview", "cashflow", "equity", "scenarios"].includes(tabName)) {
+        assert.equal(layout.tableDisplay, "block", `${tabName} table should use card display at ${viewport.width}px`);
+        assert.ok(
+          layout.labeledCells.length > 0 && layout.labeledCells.every(Boolean),
+          `${tabName} mobile table cards should expose data-labels at ${viewport.width}px`,
+        );
+      }
+    }
+
+    await clickUnique(page, ".rail-item[data-tab='scenarios']");
+    const bottomClearance = await page.evaluate(() => {
+      window.scrollTo(0, document.documentElement.scrollHeight);
+      const nav = document.querySelector(".nav-rail").getBoundingClientRect();
+      const activePanel = document.querySelector(".tab-panel.is-active");
+      const lastVisible = [...activePanel.querySelectorAll(".scenario-table-wrap, .scenario-row, article.panel")]
+        .filter((item) => {
+          const rect = item.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0;
+        })
+        .at(-1);
+      const lastRect = lastVisible.getBoundingClientRect();
+      return {
+        navTop: Math.round(nav.top),
+        lastBottom: Math.round(lastRect.bottom),
+      };
+    });
+    assert.ok(
+      bottomClearance.lastBottom <= bottomClearance.navTop - 8,
+      `Expected bottom nav not to cover scenario content at ${viewport.width}px: ${JSON.stringify(bottomClearance)}`,
+    );
   }
 });
 

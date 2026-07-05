@@ -1,6 +1,9 @@
 /* ===== Compensation Mix ===== */
 
 .mix-chart {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   min-height: 320px;
   display: grid;
   place-items: center;
@@ -9,6 +12,7 @@
 
 .mix-controls {
   width: 100%;
+  min-width: 0;
   display: flex;
   justify-content: flex-end;
 }
@@ -18,7 +22,8 @@
 }
 
 .mix-donut {
-  width: 190px;
+  width: min(190px, 100%);
+  max-width: 100%;
   aspect-ratio: 1;
   overflow: visible;
 }
@@ -66,6 +71,7 @@
 .mix-detail-label {
   min-height: 34px;
   width: min(100%, 280px);
+  max-width: 100%;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: #f8fbfa;
@@ -76,18 +82,21 @@
   text-align: center;
   font-size: 13px;
   font-weight: 800;
+  overflow-wrap: anywhere;
 }
 
 .legend {
   display: grid;
   gap: 8px;
   width: 100%;
+  min-width: 0;
 }
 
 .legend-row {
   display: flex;
   justify-content: space-between;
   gap: 10px;
+  min-width: 0;
   color: var(--muted);
   font-size: 13px;
 }
@@ -96,8 +105,10 @@
   display: grid;
   gap: 2px;
   justify-items: end;
+  min-width: 0;
   color: var(--text);
   text-align: right;
+  overflow-wrap: anywhere;
 }
 
 .mix-percent {
@@ -110,6 +121,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
   color: var(--text);
   font-weight: 700;
 }
