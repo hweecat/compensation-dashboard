@@ -279,6 +279,82 @@ test("mobile active tab content fits and phone tables render as labeled cards", 
   }
 });
 
+test("mobile tall detail tables expand to contain card rows", async ({ page, url }) => {
+  const viewports = [
+    { width: 390, height: 844 },
+    { width: 430, height: 932 },
+  ];
+  const tabs = ["cashflow", "equity"];
+
+  for (const viewport of viewports) {
+    await page.setViewportSize(viewport);
+    await resetPage(page, url);
+
+    for (const tabName of tabs) {
+      await clickUnique(page, `.rail-item[data-tab='${tabName}']`);
+      const tableContainment = await page.evaluate((activeTabName) => {
+        const activePanel = document.querySelector(".tab-panel.is-active");
+        return [...activePanel.querySelectorAll(".table-wrap.tall")].map((wrap) => {
+          const table = wrap.querySelector("table");
+          const panel = wrap.closest(".panel");
+          const wrapRect = wrap.getBoundingClientRect();
+          const tableRect = table.getBoundingClientRect();
+          const panelRect = panel.getBoundingClientRect();
+          const style = getComputedStyle(wrap);
+          return {
+            activeTabName,
+            maxHeight: style.maxHeight,
+            overflowY: style.overflowY,
+            wrapHeight: Math.round(wrapRect.height),
+            tableHeight: Math.round(tableRect.height),
+            panelBottom: Math.round(panelRect.bottom),
+            tableBottom: Math.round(tableRect.bottom),
+            cardDisplay: getComputedStyle(table).display,
+            labeledCells: [...table.querySelectorAll("tbody tr:first-child td")].map((cell) => cell.getAttribute("data-label")),
+          };
+        });
+      }, tabName);
+
+      assert.ok(tableContainment.length > 0, `Expected ${tabName} to include a tall table wrapper`);
+      for (const detail of tableContainment) {
+        assert.equal(detail.cardDisplay, "block", `${tabName} tall table should render as mobile cards`);
+        assert.equal(detail.maxHeight, "none", `${tabName} tall wrapper should not cap card rows: ${JSON.stringify(detail)}`);
+        assert.ok(
+          detail.wrapHeight >= detail.tableHeight,
+          `${tabName} tall wrapper should grow around its table cards: ${JSON.stringify(detail)}`,
+        );
+        assert.ok(
+          detail.tableBottom <= detail.panelBottom + 1,
+          `${tabName} panel should contain the final visible card row: ${JSON.stringify(detail)}`,
+        );
+        assert.ok(
+          detail.labeledCells.length > 0 && detail.labeledCells.every(Boolean),
+          `${tabName} card rows should retain labels: ${JSON.stringify(detail)}`,
+        );
+      }
+
+      const finalCardClearance = await page.evaluate(() => {
+        window.scrollTo(0, document.documentElement.scrollHeight);
+        const nav = document.querySelector(".nav-rail").getBoundingClientRect();
+        const activePanel = document.querySelector(".tab-panel.is-active");
+        const rows = [...activePanel.querySelectorAll(".table-wrap.tall tbody tr, .table-wrap.tall tfoot tr")].filter((row) => {
+          const rect = row.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0;
+        });
+        const finalRow = rows.at(-1).getBoundingClientRect();
+        return {
+          navTop: Math.round(nav.top),
+          finalRowBottom: Math.round(finalRow.bottom),
+        };
+      });
+      assert.ok(
+        finalCardClearance.finalRowBottom <= finalCardClearance.navTop - 8,
+        `${tabName} final mobile table card should clear the bottom nav: ${JSON.stringify(finalCardClearance)}`,
+      );
+    }
+  }
+});
+
 test("cashflow chart colors and zoom pane layout are explicit across browsers", async ({ page, url }) => {
   await resetPage(page, url);
 

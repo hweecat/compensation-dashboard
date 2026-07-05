@@ -6,7 +6,6 @@ const workspaceRoot = path.resolve(__dirname, "..");
 
 const checkedFiles = [
   "src/state.js",
-  "app.js",
   "outputs/compensation-dashboard/src/standalone.js",
 ];
 

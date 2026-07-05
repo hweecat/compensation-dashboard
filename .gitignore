@@ -1,4 +1,5 @@
 .worktrees/
+.codex-remote-attachments/
 node_modules/
 npm-debug.log*
 playwright-report/

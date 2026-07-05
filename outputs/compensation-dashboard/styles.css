@@ -1295,7 +1295,7 @@ tfoot td {
   }
 
   .table-wrap.tall {
-    max-height: 460px;
+    max-height: none;
   }
 
   #scenarioYearTable {
