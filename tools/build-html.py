@@ -408,8 +408,8 @@ def scenarios():
         "Year 1 and Year 2 sign-on bonuses can pay as a lump sum or over monthly instalments.",
         "RSU shares are implied from grant value divided by starting share price.",
         "Equity vests only after each completed vesting period, using exact anniversary dates from the start date.",
-        "Custom vesting schedules such as 5:15:45:35 or 22:66:195:151 are normalized as year-by-year grant weights.",
-        "Event-based custom schedules such as 30:98,36:97,42:76,48:75 vest exact units at completed months.",
+        "Custom vesting schedules such as 5:15:45:35 or 10:20:30:40 are normalized as year-by-year grant weights.",
+        "Event-based custom schedules such as 30:23,36:22,42:18,48:17 vest exact units at completed months.",
         "Cash and equity can use different source currencies; dashboard totals use the selected reporting currency.",
         "Equity valuation grows monthly from the selected annual growth assumption.",
     ]

@@ -9,6 +9,6 @@ test-results/
 Thumbs.db
 *.pyc
 __pycache__/
-outputs/compensation_dashboard/index.html
-outputs/compensation_dashboard/styles.css
+outputs/compensation-dashboard/index.html
+outputs/compensation-dashboard/styles.css
 outputs/compensation-dashboard/src
