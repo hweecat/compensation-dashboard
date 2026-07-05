@@ -97,6 +97,10 @@ GitHub Pages deployment is defined in:
 
 The workflow runs on pushes to `main` and through manual dispatch. It installs Node.js and Python, regenerates the static dashboard, runs the regression tests, uploads `outputs/compensation-dashboard/` as the Pages artifact, and deploys to the default GitHub Pages URL for the repository. The exact published URL is shown in the successful deployment output.
 
+Published dashboard:
+
+- `https://ongchinhwee.me/compensation-dashboard/`
+
 The checked-in defaults are public sample assumptions, not private compensation data. Before publishing new examples, run:
 
 ```powershell
