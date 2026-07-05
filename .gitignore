@@ -9,3 +9,6 @@ test-results/
 Thumbs.db
 *.pyc
 __pycache__/
+outputs/compensation_dashboard/index.html
+outputs/compensation_dashboard/styles.css
+outputs/compensation-dashboard/src
