@@ -1387,7 +1387,13 @@ function renderControls() {
 function setActiveTab(tab) {
   activeTab = tab;
   document.querySelectorAll("[data-tab]").forEach((button) => {
-    button.classList.toggle("is-active", button.dataset.tab === tab);
+    const isActive = button.dataset.tab === tab;
+    button.classList.toggle("is-active", isActive);
+    if (isActive) {
+      button.setAttribute("aria-current", "page");
+    } else {
+      button.removeAttribute("aria-current");
+    }
   });
   document.querySelectorAll(".tab-panel").forEach((panel) => {
     panel.classList.toggle("is-active", panel.id === tab);

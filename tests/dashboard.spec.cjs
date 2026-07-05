@@ -91,6 +91,64 @@ test("module app boots without legacy app.js fallback", async ({ page, url }) =>
   assert.equal(await page.locator("#summaryCards .summary-card").count(), 4);
 });
 
+test("mobile and tablet layouts use bottom navigation without page-level overflow", async ({ page, url }) => {
+  const viewports = [
+    { width: 390, height: 844 },
+    { width: 430, height: 932 },
+    { width: 768, height: 1024 },
+    { width: 1024, height: 768 },
+  ];
+
+  for (const viewport of viewports) {
+    await page.setViewportSize(viewport);
+    await resetPage(page, url);
+
+    const layout = await page.evaluate(() => {
+      const nav = document.querySelector(".nav-rail");
+      const workspace = document.querySelector(".workspace");
+      const firstTableWrap = document.querySelector(".table-wrap");
+      const navStyle = getComputedStyle(nav);
+      const workspaceStyle = getComputedStyle(workspace);
+      return {
+        viewportWidth: window.innerWidth,
+        documentWidth: document.documentElement.scrollWidth,
+        bodyWidth: document.body.scrollWidth,
+        navPosition: navStyle.position,
+        navBottom: navStyle.bottom,
+        navHeight: nav.getBoundingClientRect().height,
+        navTop: nav.getBoundingClientRect().top,
+        activeRailCurrent: nav.querySelector(".rail-item.is-active")?.getAttribute("aria-current"),
+        inactiveRailCurrent: nav.querySelector(".rail-item:not(.is-active)")?.getAttribute("aria-current"),
+        workspacePaddingBottom: parseFloat(workspaceStyle.paddingBottom),
+        summaryColumns: getComputedStyle(document.querySelector("#summaryCards")).gridTemplateColumns.split(" ").length,
+        cashflowTableScrollable: firstTableWrap.scrollWidth > firstTableWrap.clientWidth,
+      };
+    });
+
+    assert.equal(layout.navPosition, "fixed", `Expected fixed nav at ${viewport.width}px`);
+    assert.equal(layout.navBottom, "0px", `Expected bottom-pinned nav at ${viewport.width}px`);
+    assert.equal(layout.activeRailCurrent, "page", `Expected active rail item to expose aria-current at ${viewport.width}px`);
+    assert.equal(layout.inactiveRailCurrent, null, `Expected inactive rail items to omit aria-current at ${viewport.width}px`);
+    assert.ok(
+      layout.navTop >= viewport.height - layout.navHeight - 1,
+      `Expected bottom nav near the bottom at ${viewport.width}px, got top ${layout.navTop}`,
+    );
+    assert.ok(
+      layout.workspacePaddingBottom > layout.navHeight,
+      `Expected workspace bottom padding ${layout.workspacePaddingBottom} to exceed nav height ${layout.navHeight} at ${viewport.width}px`,
+    );
+    if (viewport.width <= 430) {
+      assert.equal(layout.summaryColumns, 2);
+      assert.equal(layout.cashflowTableScrollable, true);
+    }
+    assert.ok(
+      layout.documentWidth <= layout.viewportWidth + 1,
+      `Expected no document overflow at ${viewport.width}px, got ${layout.documentWidth}`,
+    );
+    assert.ok(layout.bodyWidth <= layout.viewportWidth + 1, `Expected no body overflow at ${viewport.width}px, got ${layout.bodyWidth}`);
+  }
+});
+
 test("cashflow chart colors and zoom pane layout are explicit across browsers", async ({ page, url }) => {
   await resetPage(page, url);
 
