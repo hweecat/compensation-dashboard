@@ -1,5 +1,5 @@
 const DEFAULTS = {
-  scenarioName: "Sample Compensation Projection",
+  scenarioName: "Compensation Projection",
   startDate: new Date().toISOString().slice(0, 10),
   years: 4,
   cashCurrency: "SGD",

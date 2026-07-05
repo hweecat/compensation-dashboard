@@ -11,7 +11,7 @@ const checkedFiles = [
 ];
 
 const publicDefaults = {
-  scenarioName: "Sample Compensation Projection",
+  scenarioName: "Compensation Projection",
   baseSalary: 120000,
   bonusPercent: 10,
   signOnYear1: 10000,

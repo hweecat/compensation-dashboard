@@ -17,7 +17,7 @@ async function assertPublicDefaults(page) {
     "Custom Schedule": "25:25:25:25",
   };
 
-  assert.equal(await page.locator("#scenarioName").inputValue(), "Sample Compensation Projection");
+  assert.equal(await page.locator("#scenarioName").inputValue(), "Compensation Projection");
   for (const [label, value] of Object.entries(expectedDefaults)) {
     const actual = await page.evaluate((fieldLabel) => {
       const field = [...document.querySelectorAll("#assumptionControls .field")].find((node) =>
