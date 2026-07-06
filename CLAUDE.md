@@ -10,6 +10,13 @@ Default assumptions in `src/state.js` are public sample values — never replace
 
 ## Build commands
 
+> **Note (worktree `chore/vite-react-redesign`):** Vite, React 18, and
+> TypeScript tooling have been added (`tsconfig.json`, `vite.config.ts`,
+> `vitest.config.ts`). The `dist/` output directory is configured but not
+> yet active — `npm run build` still invokes the Python pipeline until
+> commit 2 of the migration flips the script. See "Migration status" at
+> the bottom of this file.
+
 All static browser assets (HTML, CSS, JS) are regenerated from the maintainable sources in one shot. The combined script chains the Python HTML generator, the Node CSS generator, and the Node JS generator.
 
 - One-shot rebuild: `node tools/build-static.cjs`
@@ -28,9 +35,17 @@ Regression tests run as plain Node scripts (no test runner):
 - All: `npm test` — runs `public-defaults` + `source-layout` + `html-structure` + `style-structure` + `dashboard` + `file-module-load` in order.
 - Structure-only (no browser): `npm run test:structure`.
 - Browser-only (needs Playwright + Chromium): `npm run test:browser`.
-- A standalone performance check exists at `tests/performance-compare.cjs` (compares modular vs. legacy baseline; not part of `npm test`).
+- A standalone performance check exists at `tests/performance-compare.cjs`. It compares the current modular bundle against a synthetic legacy baseline URL served by `tests/helpers/static-server.cjs`; not part of `npm test` because it requires a local Chrome at `C:/Program Files/Google/Chrome/Application/chrome.exe`. Opt-in: `node tests/performance-compare.cjs`.
 
-`tests/helpers/playwright.cjs` prefers the `playwright` package from `node_modules` and falls back to a bundled Codex-runtime path; tests run headless using the system Chrome at `C:/Program Files/Google/Chrome/Application/chrome.exe` when present. Playwright version is pinned in `package.json` and asserted in the helper.
+Playwright version is pinned in `package.json` (currently `1.61.1`) and
+enforced in `tests/helpers/playwright.cjs` (line 9 reads
+`expectedPlaywrightVersion` from the lockfile-equivalent and rejects
+mismatches). The `postinstall` hook runs `playwright install chromium`
+which downloads ~300 MB; on a slow link it adds minutes to a fresh
+`npm install`. Set `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1` in CI to skip
+when reusing cached browsers.
+
+`tests/helpers/playwright.cjs` prefers the `playwright` package from `node_modules` and falls back to a bundled Codex-runtime path; tests run headless using the system Chrome at `C:/Program Files/Google/Chrome/Application/chrome.exe` when present.
 
 The `html-structure` and `style-structure` specs round-trip the generators and compare output to the root `styles.css` and (in `html-structure`) the indentation of a root `index.html`. The root `index.html` was removed in the cleanup, so the `html-structure` spec's root-vs-output indentation check will fail until the test is updated to drop the root reference. Treat the structure specs as a known-failing target while the cleanup is finalized, or update them to only inspect the generated `outputs/compensation-dashboard/` files.
 
@@ -60,6 +75,44 @@ Three maintainable source trees feed one combined builder:
 3. **Component CSS sources** under `src/styles/` — sorted and concatenated by `tools/build-styles.cjs`. The order is fixed (asserted by `style-structure.spec.cjs`):
    `00-foundations` → `01-app-shell` → `02-navigation` → `03-top-bar` → `04-buttons` → `05-panels` → `06-forms` → `07-tabs` → `08-summary` → `09-charts` → `10-compensation-mix` → `11-tables` → `12-scenarios` → `13-responsive`. Each file starts with a `/* ===== Section ===== */` header. The generator writes two outputs — the committed root `styles.css` and the gitignored `outputs/compensation-dashboard/styles.css` — and they must remain byte-identical (normalized line endings). Neither must reference an undefined `--border` token.
 
+### DOM contract (test-enforced)
+
+Several DOM ids and class names are load-bearing — they are asserted by the
+Playwright `dashboard.spec.cjs` and the structural CSS selectors in
+`tests/style-structure.spec.cjs`. Renaming or removing any of them silently
+breaks the suite. The contract covers:
+
+- Container ids: `#summaryCards`, `#cashflowChart`, `#equityChart`, `#mixChart`,
+  `#cashflowRows`, `#vestingRows`, `#vestingPreview`, `#equityStats`,
+  `#scenarioGrid`, `#scenarioYearTable`, `#scenarioYearHead`,
+  `#scenarioYearRows`, `#cashflowWindowOverview`, `#equityWindowOverview`,
+  `#cashflowWindowStart`, `#cashflowWindowEnd`, `#equityWindowStart`,
+  `#equityWindowEnd`, `#mixPeriodSelect`, `#mixPeriodLabel`,
+  `#cashflowWindowLabel`, `#equityWindowLabel`, `#cashflowZoomLabel`,
+  `#equityZoomLabel`, `#periodLabel`, `#assumptionControls`, `#peakBadge`,
+  `#cashflowTotal`, `#equityPointDetail`, `#mixHoverDetail`,
+  `#cashflowChartTitle`, `#cashflowChartSubtitle`, `#cashflowDetailTitle`,
+  `#cashflowDetailSubtitle`, `#cashflowSubtotal`.
+- Tab routing: `[data-tab="overview|cashflow|equity|scenarios"]` on
+  `.rail-item` and `.tab-button`.
+- Cashflow components: `[data-cashflow-component="salary|bonus|signOn|equityValue"]`.
+- Cashflow/equity zoom: `[data-{cashflow,equity}-zoom="in|out"]`,
+  `[data-{cashflow,equity}-zoom-reset]`,
+  `[data-overview-cashflow-view="monthly|annual"]`,
+  `[data-detail-cashflow-view="monthly|annual"]`,
+  `[data-overview-cumulative]`, `[data-detail-cumulative]`.
+- CSS selectors checked by `style-structure.spec.cjs`: `.cashflow-window-overview`,
+  `.salary-fill`, `.bonus-fill`, `.signon-fill`, `.equity-fill`,
+  `.equity-line`, `.mix-segment`, `.table-wrap`.
+- Top-bar control ids: `#resetButton`, `#exportButton`, `#exportReportButton`,
+  `#scenarioName`.
+- Mobile contract: at viewport ≤430px the `#summaryCards` grid must use
+  exactly two columns, and tables must use `display: block` (asserted in
+  `dashboard.spec.cjs`).
+
+Always grep these ids/classes before refactoring components:
+`rg "summaryCards|cashflowChart|mixChart|table-wrap|salary-fill" tests/`.
+
 ## Data flow
 
 `main.js` loads state from `state.js`, then on every render: normalize → call `projectionFor(state, DEFAULTS)` → pass `(state, model)` into each component renderer. UI events mutate `state`, call `persistState`, and re-run `render()` (which re-runs `projectionFor`). Components are pure with respect to the data passed in — no hidden global state, no DOM lookups beyond the explicit container ids declared in the generated HTML.
@@ -84,8 +137,29 @@ Three maintainable source trees feed one combined builder:
 
 ## File layout quick reference
 
-- Maintainable: `tools/build-html.py`, `src/**`, `src/styles/**`
-- Generated (do not edit): `styles.css` (root, committed), `outputs/compensation-dashboard/**` (gitignored — the deployed artifact rebuilt by `npm run build`)
 - Tests: `tests/*.spec.cjs`, `tests/file-module-load.cjs`, `tests/performance-compare.cjs`, `tests/helpers/{playwright,static-server}.cjs`
 - Plans/specs: `docs/superpowers/plans/`, `docs/superpowers/specs/`
 - Concept reference: `assets/concept-dashboard.png`
+- Generated `outputs/compensation-dashboard/` (gitignored, rebuilt by `npm run build`) and `dist/` (gitignored, not yet active; configured by `vite.config.ts`).
+
+## Migration status
+
+A staged migration to Vite 7 + React 18 + TypeScript is in progress on
+branch `chore/vite-react-redesign` (worktree `.worktrees/vite-react-redesign`).
+Commits, in order:
+
+1. ✅ Add Vite/React/TS tooling (no behavior change).
+2. ⬜ Add `index.html` Vite entrypoint, flip `npm run build` to `vite build`,
+   update test paths to `dist/`, add `dist/` to `.gitignore`.
+3. ⬜ Port `src/state.js` → `src/state.ts`, `src/format.js` → `src/format.ts`.
+4. ⬜ Port `src/model.js` → `src/model.ts` (math, highest-value typing).
+5. ⬜ Port `src/components/*.js` → React components (`*.tsx`).
+6. ⬜ Wire `App.tsx` end-to-end, fix the `html-structure` test
+   (remove root `index.html` reference).
+7. ⬜ Add Vitest unit tests for `model.ts`/`format.ts`, React Testing
+   Library tests for one or two core components.
+8. ⬜ Delete `tools/build-{html,standalone,static,styles}.*`, update
+   GitHub Pages workflow to use `dist/` and drop the Python setup.
+
+Until commit 8 lands, the Python pipeline described above remains the
+source of truth.
