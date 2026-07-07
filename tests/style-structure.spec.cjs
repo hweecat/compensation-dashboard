@@ -1,6 +1,7 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const { spawnSync } = require("node:child_process");
 
 const workspaceRoot = path.resolve(__dirname, "..");
 const sourceStyleRoot = path.join(workspaceRoot, "src/styles");
@@ -40,6 +41,12 @@ const requiredSelectors = [
 
 assert.ok(fs.existsSync(sourceStyleRoot), "Expected component CSS source directory at src/styles");
 assert.ok(fs.existsSync(buildStylesPath), "Expected tools/build-styles.cjs to generate styles.css");
+
+// Run the CSS generator so both styles.css copies exist for the checks below.
+// The root styles.css was deleted in the cleanup; build-styles.cjs recreates it.
+const nodeExe = process.execPath;
+const buildResult = spawnSync(nodeExe, [buildStylesPath], { cwd: workspaceRoot, encoding: "utf8" });
+assert.equal(buildResult.status, 0, `CSS generator should run successfully: ${buildResult.stderr || buildResult.stdout}`);
 
 const actualStyleFiles = fs.readdirSync(sourceStyleRoot).filter((file) => file.endsWith(".css")).sort();
 assert.deepEqual(

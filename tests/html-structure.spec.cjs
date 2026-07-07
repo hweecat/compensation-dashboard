@@ -6,7 +6,6 @@ const { spawnSync } = require("node:child_process");
 const workspaceRoot = path.resolve(__dirname, "..");
 const sourceHtmlRoot = path.join(workspaceRoot, "src/html");
 const buildHtmlPath = path.join(workspaceRoot, "tools/build-html.py");
-const rootIndexPath = path.join(workspaceRoot, "index.html");
 const outputIndexPath = path.join(workspaceRoot, "outputs/compensation-dashboard/index.html");
 
 const pythonLayers = {
@@ -145,33 +144,13 @@ const result = spawnSync(python, [buildHtmlPath], {
 assert.equal(result.status, 0, `HTML generator should run successfully: ${result.stderr || result.stdout}`);
 
 const outputHtml = fs.readFileSync(outputIndexPath, "utf8");
-const rootHtml = fs.readFileSync(rootIndexPath, "utf8");
 
 requiredContracts.forEach((contract) => {
   assert.match(outputHtml, new RegExp(contract.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `index.html should keep ${contract}`);
 });
 
-const indentationFor = (html, needle) => {
-  const line = html.split(/\r?\n/).find((candidate) => candidate.includes(needle));
-  assert.ok(line, `Expected to find ${needle}`);
-  return line.match(/^\s*/)[0].length;
-};
-
-[
-  "<!doctype html>",
-  '<main class="app-shell">',
-  '<aside class="nav-rail"',
-  '<section class="workspace">',
-  '<header class="topbar">',
-  '<div class="dashboard-grid">',
-  '<section class="main-panel">',
-  '<nav class="tab-strip"',
-  '<section id="overview"',
-  '<article class="panel span-2">',
-].forEach((needle) => {
-  assert.equal(
-    indentationFor(outputHtml, needle),
-    indentationFor(rootHtml, needle),
-    `Generated output indentation should match root index.html for ${needle}`,
-  );
-});
+// TODO(migration): the root-vs-output indentation comparison was removed when
+// the committed root index.html was deleted in the cleanup. The Python
+// generator (tools/build-html.py) is still checked above. This entire spec
+// will be replaced with a React-component-structure spec in commit 8 when
+// tools/ is deleted.
