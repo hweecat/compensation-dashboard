@@ -3,7 +3,7 @@ const path = require("node:path");
 const { pathToFileURL } = require("node:url");
 const { chromium, browserLaunchOptions } = require("./helpers/playwright.cjs");
 
-const indexPath = path.resolve(__dirname, "../outputs/compensation-dashboard/index.html");
+const indexPath = path.resolve(__dirname, "../dist/index.html");
 
 async function assertPublicDefaults(page) {
   const expectedDefaults = {

@@ -4,7 +4,7 @@ const path = require("node:path");
 const { serveStatic } = require("./helpers/static-server.cjs");
 const { chromium, browserLaunchOptions } = require("./helpers/playwright.cjs");
 
-const appRoot = path.resolve(__dirname, "../outputs/compensation-dashboard");
+const appRoot = path.resolve(__dirname, "../dist");
 const indexHtmlPath = path.join(appRoot, "index.html");
 
 const tests = [];

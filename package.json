@@ -4,7 +4,9 @@
   "private": true,
   "description": "Static compensation projection dashboard.",
   "scripts": {
-    "build": "node tools/build-static.cjs",
+    "build": "vite build",
+    "dev": "vite",
+    "preview": "vite preview",
     "test": "node tests/public-defaults.spec.cjs && node tests/source-layout.spec.cjs && node tests/html-structure.spec.cjs && node tests/style-structure.spec.cjs && node tests/dashboard.spec.cjs && node tests/file-module-load.cjs",
     "test:structure": "node tests/public-defaults.spec.cjs && node tests/source-layout.spec.cjs && node tests/html-structure.spec.cjs && node tests/style-structure.spec.cjs",
     "test:browser": "node tests/dashboard.spec.cjs && node tests/file-module-load.cjs",
