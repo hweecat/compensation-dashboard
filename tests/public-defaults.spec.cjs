@@ -7,7 +7,7 @@ const workspaceRoot = path.resolve(__dirname, "..");
 // TODO(migration): re-enable dist bundle checks after commit 6 wires the real
 // React app (which imports state.ts). The placeholder App in commit 2 does not
 // import state, so the minified bundle won't contain the defaults yet.
-const checkedFiles = ["src/state.js"];
+const checkedFiles = ["src/state.ts"];
 
 const publicDefaults = {
   scenarioName: "Compensation Projection",

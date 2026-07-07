@@ -12,10 +12,10 @@ const buildStylesPath = path.join(root, "tools/build-styles.cjs");
 const expectedSourceFiles = [
   "dom.js",
   "export.js",
-  "format.js",
+  "format.ts",
   "main.js",
   "model.js",
-  "state.js",
+  "state.ts",
   "components/charts.js",
   "components/controls.js",
   "components/tables.js",
