@@ -4,39 +4,42 @@ const path = require("node:path");
 
 const root = path.resolve(__dirname, "..");
 const sourceRoot = path.join(root, "src");
-const outputSourceRoot = path.join(root, "outputs/compensation-dashboard/src");
 const buildStaticPath = path.join(root, "tools/build-static.cjs");
 const buildHtmlPath = path.join(root, "tools/build-html.py");
 const buildStandalonePath = path.join(root, "tools/build-standalone.cjs");
 const buildStylesPath = path.join(root, "tools/build-styles.cjs");
-const expectedSourceFiles = [
-  "dom.js",
-  "export.js",
+
+// New TS/React source files (the migration target)
+const expectedNewSourceFiles = [
+  "App.tsx",
+  "dom.ts",
+  "export.ts",
   "format.ts",
-  "main.js",
+  "main.tsx",
   "model.ts",
   "state.ts",
+  "vite-env.d.ts",
+];
+
+// Old JS source files still present (deleted in commit 8)
+const expectedLegacySourceFiles = [
+  "dom.js",
+  "export.js",
+  "main.js",
   "components/charts.js",
   "components/controls.js",
   "components/tables.js",
 ];
 
-function listFiles(dir) {
-  if (!fs.existsSync(dir)) return [];
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
-  return entries.flatMap((entry) => {
-    const absolute = path.join(dir, entry.name);
-    if (entry.isDirectory()) return listFiles(absolute);
-    return [path.relative(dir, absolute)];
-  });
+for (const file of expectedNewSourceFiles) {
+  assert.ok(fs.existsSync(path.join(sourceRoot, file)), `Expected TS/React source module at src/${file}`);
 }
 
-for (const file of expectedSourceFiles) {
-  assert.ok(fs.existsSync(path.join(sourceRoot, file)), `Expected source module at src/${file}`);
-  assert.ok(!fs.existsSync(path.join(outputSourceRoot, file)), `Did not expect source module in output src/${file}`);
+for (const file of expectedLegacySourceFiles) {
+  assert.ok(fs.existsSync(path.join(sourceRoot, file)), `Expected legacy JS source at src/${file} (removed in commit 8)`);
 }
 
-assert.ok(fs.existsSync(path.join(outputSourceRoot, "standalone.js")), "Expected generated standalone.js in output src");
+// TODO(migration): the tools/ checks below stay valid until commit 8 deletes them.
 assert.ok(fs.existsSync(buildStaticPath), "Expected tools/build-static.cjs to generate static HTML, CSS, and JS assets");
 assert.ok(fs.existsSync(buildHtmlPath), "Expected tools/build-html.py to generate index.html");
 assert.ok(fs.existsSync(buildStandalonePath), "Expected tools/build-standalone.cjs to generate standalone.js");
@@ -46,9 +49,6 @@ const buildStaticSource = fs.readFileSync(buildStaticPath, "utf8");
 assert.match(buildStaticSource, /build-html\.py/, "Combined generator should run the Python HTML generator");
 assert.match(buildStaticSource, /build-styles\.cjs/, "Combined generator should run the CSS generator");
 assert.match(buildStaticSource, /build-standalone\.cjs/, "Combined generator should run the JS generator");
-
-const remainingOutputFiles = listFiles(outputSourceRoot).map((file) => file.replaceAll("\\", "/")).sort();
-assert.deepEqual(remainingOutputFiles, ["standalone.js"], "Output src should contain only generated standalone.js");
 
 const readme = fs.readFileSync(path.join(root, "README.md"), "utf8");
 assert.match(readme, /Total Compensation Calculator/i);

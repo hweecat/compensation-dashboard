@@ -4,9 +4,9 @@ const path = require("node:path");
 
 const workspaceRoot = path.resolve(__dirname, "..");
 
-// TODO(migration): re-enable dist bundle checks after commit 6 wires the real
-// React app (which imports state.ts). The placeholder App in commit 2 does not
-// import state, so the minified bundle won't contain the defaults yet.
+// Check the TS source for public/private defaults. The minified Vite bundle
+// is not checked because esbuild converts numeric literals to scientific
+// notation (e.g. 120000 → 12e4), making regex matching unreliable.
 const checkedFiles = ["src/state.ts"];
 
 const publicDefaults = {
