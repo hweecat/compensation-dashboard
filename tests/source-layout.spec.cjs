@@ -14,7 +14,7 @@ const expectedSourceFiles = [
   "export.js",
   "format.ts",
   "main.js",
-  "model.js",
+  "model.ts",
   "state.ts",
   "components/charts.js",
   "components/controls.js",

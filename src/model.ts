@@ -5,23 +5,115 @@ import {
   monthLabel,
   parseStartDate,
   vestingDateLabel,
-} from "./format.js";
+} from "./format";
+import type { ProjectionState } from "./state";
 
-export const scenarioGrowthRates = [-15, -10, 0, 5, 10, 15, 25];
+export const scenarioGrowthRates: number[] = [-15, -10, 0, 5, 10, 15, 25];
 
-export const cashflowComponentMeta = [
+export interface CashflowComponentMeta {
+  key: "salary" | "bonus" | "signOn" | "equityValue";
+  label: string;
+  className: string;
+}
+
+export const cashflowComponentMeta: CashflowComponentMeta[] = [
   { key: "salary", label: "Salary", className: "salary-fill" },
   { key: "bonus", label: "Bonus", className: "bonus-fill" },
   { key: "signOn", label: "Sign-on", className: "signon-fill" },
   { key: "equityValue", label: "Equity", className: "equity-fill" },
 ];
 
-export function annualSalaryForYear(state, yearIndex) {
+export interface ProjectionRow {
+  index: number;
+  vestingMonthNumber: number;
+  compYearIndex: number;
+  month: string;
+  vestingDate: string;
+  salary: number;
+  bonus: number;
+  signOn: number;
+  cashTotal: number;
+  projectedSharePrice: number;
+  sharesVested: number;
+  equityValue: number;
+  cumulativeEquityValue: number;
+  total: number;
+}
+
+export interface ProjectionTotals {
+  salary: number;
+  bonus: number;
+  signOn: number;
+  equity: number;
+  total: number;
+  cash: number;
+}
+
+export interface ProjectionModel {
+  rows: ProjectionRow[];
+  totals: ProjectionTotals;
+  totalShares: number;
+  peakMonth: ProjectionRow;
+}
+
+export interface AnnualCashflowRow {
+  index: number;
+  month: string;
+  chartLabel: string;
+  detailLabel: string;
+  salary: number;
+  bonus: number;
+  signOn: number;
+  equityValue: number;
+  cashTotal: number;
+  total: number;
+}
+
+export interface CashflowDisplayRow extends ProjectionRow {
+  chartLabel: string;
+  detailLabel: string;
+}
+
+export interface WindowRange {
+  start: number;
+  end: number;
+  total: number;
+  visibleCount: number;
+}
+
+export interface WindowSelection<T> {
+  rows: T[];
+  window: WindowRange;
+}
+
+export interface VestingEvent {
+  month: number;
+  shares: number;
+}
+
+export interface ScenarioVariant {
+  growth: number;
+  total: number;
+  delta: number;
+  annualRows: AnnualCashflowRow[];
+}
+
+export interface PolarPoint {
+  x: number;
+  y: number;
+}
+
+export function annualSalaryForYear(state: ProjectionState, yearIndex: number): number {
   const startingAnnualSalary = state.salaryBasis === "monthly" ? state.baseSalary * 12 : state.baseSalary;
   return startingAnnualSalary * (1 + state.salaryGrowth / 100) ** yearIndex;
 }
 
-export function convertCurrency(state, value, fromCurrency, toCurrency = state.reportCurrency) {
+export function convertCurrency(
+  state: ProjectionState,
+  value: number,
+  fromCurrency: string,
+  toCurrency = state.reportCurrency,
+): number {
   if (fromCurrency === toCurrency) return value;
   const usdToSgd = Math.max(0.0001, asNumber(state.usdToSgd, 1.35));
   if (fromCurrency === "USD" && toCurrency === "SGD") return value * usdToSgd;
@@ -29,7 +121,7 @@ export function convertCurrency(state, value, fromCurrency, toCurrency = state.r
   return value;
 }
 
-export function signOnForMonth(state, monthIndex) {
+export function signOnForMonth(state: ProjectionState, monthIndex: number): number {
   const buckets = [
     { start: 0, amount: state.signOnYear1, mode: state.signOnYear1Mode },
     { start: 12, amount: state.signOnYear2, mode: state.signOnYear2Mode },
@@ -41,7 +133,7 @@ export function signOnForMonth(state, monthIndex) {
   }, 0);
 }
 
-export function vestingInterval(state) {
+export function vestingInterval(state: ProjectionState): number {
   if (state.vestingCadence === "monthly") return 1;
   if (state.vestingCadence === "quarterly") return 3;
   if (state.vestingCadence === "annual") return 12;
@@ -50,7 +142,7 @@ export function vestingInterval(state) {
   return 12;
 }
 
-export function customVestingWeights(state) {
+export function customVestingWeights(state: ProjectionState): number[] {
   const values = String(state.customVestingPattern || "")
     .split(/[:;,]/)
     .map((value) => asNumber(value.trim(), NaN))
@@ -58,7 +150,7 @@ export function customVestingWeights(state) {
   return values.length ? values : [100];
 }
 
-export function customVestingEvents(state) {
+export function customVestingEvents(state: ProjectionState): VestingEvent[] {
   if (state.customVestingMode !== "events") return [];
   return String(state.customVestingPattern || "")
     .split(/[,\n]+/)
@@ -70,7 +162,11 @@ export function customVestingEvents(state) {
     .sort((a, b) => a.month - b.month);
 }
 
-export function vestingSharesForMonth(state, monthIndex, totalShares) {
+export function vestingSharesForMonth(
+  state: ProjectionState,
+  monthIndex: number,
+  totalShares: number,
+): number {
   const monthNumber = monthIndex + 1;
   const weights = customVestingWeights(state);
   const events = customVestingEvents(state);
@@ -103,7 +199,11 @@ export function vestingSharesForMonth(state, monthIndex, totalShares) {
   return totalShares / Math.max(1, totalMonths / interval);
 }
 
-export function projectionFor(state, defaults, customGrowth = state.annualEquityGrowth) {
+export function projectionFor(
+  state: ProjectionState,
+  defaults: ProjectionState,
+  customGrowth = state.annualEquityGrowth,
+): ProjectionModel {
   const months = Math.max(1, Math.round(state.years * 12));
   const eventShares = customVestingEvents(state).reduce((sum, event) => sum + event.shares, 0);
   const totalShares =
@@ -113,12 +213,12 @@ export function projectionFor(state, defaults, customGrowth = state.annualEquity
   const monthlyEquityGrowth = (1 + customGrowth / 100) ** (1 / 12) - 1;
   let cumulativeEquityValue = 0;
   const hasImmediateVesting = customVestingEvents(state).some((event) => event.month === 0);
-  const rowIndexes = [
+  const rowIndexes: number[] = [
     ...(hasImmediateVesting ? [-1] : []),
     ...Array.from({ length: months }, (_, index) => index),
   ];
 
-  const rows = rowIndexes.map((index) => {
+  const rows: ProjectionRow[] = rowIndexes.map((index) => {
     const vestingMonthNumber = index + 1;
     const compYearIndex = Math.max(0, Math.ceil(vestingMonthNumber / 12) - 1);
     const yearIndex = Math.floor(Math.max(0, index) / 12);
@@ -155,7 +255,7 @@ export function projectionFor(state, defaults, customGrowth = state.annualEquity
     };
   });
 
-  const totals = rows.reduce(
+  const totals: ProjectionTotals = rows.reduce(
     (acc, row) => {
       acc.salary += row.salary;
       acc.bonus += row.bonus;
@@ -176,12 +276,12 @@ export function projectionFor(state, defaults, customGrowth = state.annualEquity
   };
 }
 
-export function annualCashflowRows(rows) {
+export function annualCashflowRows(rows: ProjectionRow[]): AnnualCashflowRow[] {
   const yearCount = Math.max(1, Math.max(...rows.map((row) => row.compYearIndex ?? Math.floor(row.index / 12))) + 1);
   return Array.from({ length: yearCount }, (_, yearIndex) => {
     const yearRows = rows.filter((row) => (row.compYearIndex ?? Math.floor(row.index / 12)) === yearIndex);
     const first = yearRows[0];
-    const last = yearRows.at(-1);
+    const last = yearRows.at(-1)!;
     const totals = yearRows.reduce(
       (acc, row) => {
         acc.salary += row.salary;
@@ -205,7 +305,12 @@ export function annualCashflowRows(rows) {
   });
 }
 
-export function cashflowDisplayRows(state, defaults, model, view) {
+export function cashflowDisplayRows(
+  state: ProjectionState,
+  defaults: ProjectionState,
+  model: ProjectionModel,
+  view: "monthly" | "annual",
+): CashflowDisplayRow[] | AnnualCashflowRow[] {
   if (view === "annual") return annualCashflowRows(model.rows);
   return model.rows.map((row) => ({
     ...row,
@@ -214,7 +319,9 @@ export function cashflowDisplayRows(state, defaults, model, view) {
   }));
 }
 
-export function cumulativeCashflowRows(rows) {
+export function cumulativeCashflowRows<T extends { salary: number; bonus: number; signOn: number; equityValue: number; cashTotal: number; total: number }>(
+  rows: T[],
+): T[] {
   const running = { salary: 0, bonus: 0, signOn: 0, equityValue: 0, cashTotal: 0, total: 0 };
   return rows.map((row) => {
     running.salary += row.salary;
@@ -235,11 +342,11 @@ export function cumulativeCashflowRows(rows) {
   });
 }
 
-export function visibleCashflowComponents(state) {
+export function visibleCashflowComponents(state: ProjectionState): CashflowComponentMeta[] {
   return cashflowComponentMeta.filter((component) => state.cashflowComponents?.[component.key] !== false);
 }
 
-export function normalizedCashflowWindow(state, totalRows) {
+export function normalizedCashflowWindow(state: ProjectionState, totalRows: number): WindowRange {
   const total = Math.max(1, totalRows);
   let start = Math.round(asNumber(state.cashflowWindowStart, 0));
   let end = Math.round(asNumber(state.cashflowWindowEnd, total));
@@ -253,12 +360,17 @@ export function normalizedCashflowWindow(state, totalRows) {
   return { start, end, total, visibleCount };
 }
 
-export function cashflowWindowSelection(state, rows) {
+export function cashflowWindowSelection(state: ProjectionState, rows: ProjectionRow[]): WindowSelection<ProjectionRow> {
   const window = normalizedCashflowWindow(state, rows.length);
   return { rows: rows.slice(window.start, window.end), window };
 }
 
-export function resizeCashflowWindow(state, direction, totalRows, anchorRatio = 0.5) {
+export function resizeCashflowWindow(
+  state: ProjectionState,
+  direction: "in" | "out",
+  totalRows: number,
+  anchorRatio = 0.5,
+): void {
   const window = normalizedCashflowWindow(state, totalRows);
   const ratio = Math.min(1, Math.max(0, anchorRatio));
   const nextSize =
@@ -272,13 +384,18 @@ export function resizeCashflowWindow(state, direction, totalRows, anchorRatio = 
   state.cashflowZoom = window.total / nextSize;
 }
 
-export function resetCashflowWindow(state, totalRows) {
+export function resetCashflowWindow(state: ProjectionState, totalRows: number): void {
   state.cashflowWindowStart = 0;
   state.cashflowWindowEnd = Math.max(1, totalRows);
   state.cashflowZoom = 1;
 }
 
-export function selectCashflowWindowByRatios(state, totalRows, startRatio, endRatio) {
+export function selectCashflowWindowByRatios(
+  state: ProjectionState,
+  totalRows: number,
+  startRatio: number,
+  endRatio: number,
+): void {
   const window = normalizedCashflowWindow(state, totalRows);
   const low = Math.min(startRatio, endRatio);
   const high = Math.max(startRatio, endRatio);
@@ -288,12 +405,12 @@ export function selectCashflowWindowByRatios(state, totalRows, startRatio, endRa
   state.cashflowWindowEnd = Math.min(window.total, Math.max(state.cashflowWindowStart + 1, end));
 }
 
-export function cashflowZoomLabel(window) {
+export function cashflowZoomLabel(window: WindowRange): string {
   const zoom = window.total / Math.max(1, window.visibleCount);
   return `Zoom ${Number.isInteger(zoom) ? zoom : zoom.toFixed(1)}x`;
 }
 
-export function normalizedEquityWindow(state, totalRows) {
+export function normalizedEquityWindow(state: ProjectionState, totalRows: number): WindowRange {
   const total = Math.max(1, totalRows);
   let start = Math.round(asNumber(state.equityWindowStart, 0));
   let end = Math.round(asNumber(state.equityWindowEnd, total));
@@ -305,12 +422,17 @@ export function normalizedEquityWindow(state, totalRows) {
   return { start, end, total, visibleCount: Math.max(1, end - start) };
 }
 
-export function equityWindowSelection(state, rows) {
+export function equityWindowSelection(state: ProjectionState, rows: ProjectionRow[]): WindowSelection<ProjectionRow> {
   const window = normalizedEquityWindow(state, rows.length);
   return { rows: rows.slice(window.start, window.end), window };
 }
 
-export function resizeEquityWindow(state, direction, totalRows, anchorRatio = 0.5) {
+export function resizeEquityWindow(
+  state: ProjectionState,
+  direction: "in" | "out",
+  totalRows: number,
+  anchorRatio = 0.5,
+): void {
   const window = normalizedEquityWindow(state, totalRows);
   const ratio = Math.min(1, Math.max(0, anchorRatio));
   const nextSize =
@@ -323,12 +445,17 @@ export function resizeEquityWindow(state, direction, totalRows, anchorRatio = 0.
   state.equityWindowEnd = start + nextSize;
 }
 
-export function resetEquityWindow(state, totalRows) {
+export function resetEquityWindow(state: ProjectionState, totalRows: number): void {
   state.equityWindowStart = 0;
   state.equityWindowEnd = Math.max(1, totalRows);
 }
 
-export function selectEquityWindowByRatios(state, totalRows, startRatio, endRatio) {
+export function selectEquityWindowByRatios(
+  state: ProjectionState,
+  totalRows: number,
+  startRatio: number,
+  endRatio: number,
+): void {
   const window = normalizedEquityWindow(state, totalRows);
   const low = Math.min(startRatio, endRatio);
   const high = Math.max(startRatio, endRatio);
@@ -338,12 +465,12 @@ export function selectEquityWindowByRatios(state, totalRows, startRatio, endRati
   state.equityWindowEnd = Math.min(window.total, Math.max(state.equityWindowStart + 1, end));
 }
 
-export function equityZoomLabel(window) {
+export function equityZoomLabel(window: WindowRange): string {
   const zoom = window.total / Math.max(1, window.visibleCount);
   return `Zoom ${Number.isInteger(zoom) ? zoom : zoom.toFixed(1)}x`;
 }
 
-export function totalsForRows(rows) {
+export function totalsForRows(rows: ProjectionRow[]): ProjectionTotals {
   return rows.reduce(
     (acc, row) => {
       acc.salary += row.salary;
@@ -353,25 +480,25 @@ export function totalsForRows(rows) {
       acc.total += row.total;
       return acc;
     },
-    { salary: 0, bonus: 0, signOn: 0, equity: 0, total: 0 },
+    { salary: 0, bonus: 0, signOn: 0, equity: 0, total: 0, cash: 0 },
   );
 }
 
-export function mixRows(state, model) {
+export function mixRows(state: ProjectionState, model: ProjectionModel): ProjectionRow[] {
   if (state.mixPeriod === "all") return model.rows;
   const yearIndex = asNumber(state.mixPeriod.replace("year-", ""), 1) - 1;
   return model.rows.filter((row) => (row.compYearIndex ?? Math.floor(row.index / 12)) === yearIndex);
 }
 
-export function mixPeriodOptions(state) {
+export function mixPeriodOptions(state: ProjectionState): Array<[string, string]> {
   const yearCount = Math.max(1, Math.round(state.years));
   return [
     ["all", "All years"],
-    ...Array.from({ length: yearCount }, (_, index) => [`year-${index + 1}`, `Year ${index + 1}`]),
+    ...Array.from({ length: yearCount }, (_, index): [string, string] => [`year-${index + 1}`, `Year ${index + 1}`]),
   ];
 }
 
-export function polarPoint(cx, cy, radius, angle) {
+export function polarPoint(cx: number, cy: number, radius: number, angle: number): PolarPoint {
   const radians = ((angle - 90) * Math.PI) / 180;
   return {
     x: cx + radius * Math.cos(radians),
@@ -379,7 +506,7 @@ export function polarPoint(cx, cy, radius, angle) {
   };
 }
 
-export function donutSegmentPath(startPercent, endPercent) {
+export function donutSegmentPath(startPercent: number, endPercent: number): string {
   const cx = 100;
   const cy = 100;
   const outerRadius = 88;
@@ -402,7 +529,7 @@ export function donutSegmentPath(startPercent, endPercent) {
   ].join(" ");
 }
 
-export function scenarioVariants(state, defaults) {
+export function scenarioVariants(state: ProjectionState, defaults: ProjectionState): ScenarioVariant[] {
   const baseTotal = projectionFor(state, defaults, 0).totals.total;
   return scenarioGrowthRates.map((growth) => {
     const model = projectionFor(state, defaults, growth);
@@ -411,6 +538,6 @@ export function scenarioVariants(state, defaults) {
   });
 }
 
-export function projectionPeriodLabel(state, defaults) {
+export function projectionPeriodLabel(state: ProjectionState, defaults: ProjectionState): string {
   return `${parseStartDate(state, defaults).toISOString()} ${addMonths(parseStartDate(state, defaults), state.years * 12).toISOString()}`;
 }
