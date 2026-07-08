@@ -27,11 +27,6 @@ jobs:
           node-version: 24
           cache: npm
 
-      - name: Setup Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.13"
-
       - name: Install dependencies
         run: npm ci
 
@@ -47,7 +42,7 @@ jobs:
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          path: outputs/compensation-dashboard
+          path: dist
 
   deploy:
     if: github.ref == 'refs/heads/main'

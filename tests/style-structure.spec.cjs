@@ -1,15 +1,10 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const { spawnSync } = require("node:child_process");
 
 const workspaceRoot = path.resolve(__dirname, "..");
 const sourceStyleRoot = path.join(workspaceRoot, "src/styles");
-const buildStylesPath = path.join(workspaceRoot, "tools/build-styles.cjs");
-const stylePaths = [
-  path.join(workspaceRoot, "styles.css"),
-  path.join(workspaceRoot, "outputs/compensation-dashboard/styles.css"),
-];
+const distAssetsDir = path.join(workspaceRoot, "dist/assets");
 
 const styleComponents = [
   ["00-foundations.css", "Foundations"],
@@ -40,13 +35,7 @@ const requiredSelectors = [
 ];
 
 assert.ok(fs.existsSync(sourceStyleRoot), "Expected component CSS source directory at src/styles");
-assert.ok(fs.existsSync(buildStylesPath), "Expected tools/build-styles.cjs to generate styles.css");
-
-// Run the CSS generator so both styles.css copies exist for the checks below.
-// The root styles.css was deleted in the cleanup; build-styles.cjs recreates it.
-const nodeExe = process.execPath;
-const buildResult = spawnSync(nodeExe, [buildStylesPath], { cwd: workspaceRoot, encoding: "utf8" });
-assert.equal(buildResult.status, 0, `CSS generator should run successfully: ${buildResult.stderr || buildResult.stdout}`);
+assert.ok(!fs.existsSync(path.join(workspaceRoot, "tools/build-styles.cjs")), "Old tools/build-styles.cjs should have been deleted");
 
 const actualStyleFiles = fs.readdirSync(sourceStyleRoot).filter((file) => file.endsWith(".css")).sort();
 assert.deepEqual(
@@ -55,28 +44,37 @@ assert.deepEqual(
   "src/styles should contain the ordered component CSS source files",
 );
 
-const generatedCss = styleComponents
+const sourceCssContent = styleComponents
   .map(([file, section]) => {
     const css = fs.readFileSync(path.join(sourceStyleRoot, file), "utf8").replace(/\r\n/g, "\n").trimEnd();
-    assert.match(css, new RegExp(`^/\\* =+ ${section} =+ \\*/`), `${file} should start with the ${section} section header`);
+    assert.match(css, new RegExp("^/\\* =+ " + section + " =+ \\*/"), file + " should start with the " + section + " section header");
     return css;
   })
   .join("\n\n") + "\n";
 
-stylePaths.forEach((stylePath) => {
-  const css = fs.readFileSync(stylePath, "utf8").replace(/\r\n/g, "\n");
-  styleComponents.forEach(([, section]) => {
-    assert.match(css, new RegExp(`/\\* =+ ${section} =+ \\*/`), `${stylePath} should include a ${section} section`);
-  });
-  requiredSelectors.forEach((selector) => {
-    assert.match(css, new RegExp(selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${stylePath} should keep ${selector}`);
-  });
-  assert.doesNotMatch(css, /var\(--border\)/, `${stylePath} should not reference an undefined --border token`);
-  assert.equal(css, generatedCss, `${stylePath} should be generated from src/styles`);
+requiredSelectors.forEach((selector) => {
+  assert.match(
+    sourceCssContent,
+    new RegExp(selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
+    "CSS sources should contain " + selector,
+  );
 });
 
-assert.equal(
-  fs.readFileSync(stylePaths[0], "utf8").replace(/\r\n/g, "\n"),
-  fs.readFileSync(stylePaths[1], "utf8").replace(/\r\n/g, "\n"),
-  "Root and output stylesheets should stay in sync",
-);
+assert.doesNotMatch(sourceCssContent, /var\(--border\)/, "CSS sources should not reference an undefined --border token");
+
+if (fs.existsSync(distAssetsDir)) {
+  const distCssFiles = fs.readdirSync(distAssetsDir).filter((file) => file.endsWith(".css"));
+  assert.ok(distCssFiles.length > 0, "dist/assets should contain at least one CSS file after build");
+
+  const distCss = fs.readFileSync(path.join(distAssetsDir, distCssFiles[0]), "utf8");
+
+  requiredSelectors.forEach((selector) => {
+    assert.match(
+      distCss,
+      new RegExp(selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
+      "dist CSS should keep " + selector,
+    );
+  });
+
+  assert.doesNotMatch(distCss, /var\(--border\)/, "dist CSS should not reference an undefined --border token");
+}
