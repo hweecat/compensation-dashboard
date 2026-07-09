@@ -564,8 +564,8 @@ export function App() {
     };
     const onWheel = (e: WheelEvent) => { e.preventDefault(); handleZoom(e.deltaY < 0 ? "in" : "out", "cashflow"); };
     const onKeyDown = (e: KeyboardEvent) => { if (e.key === "+" || e.key === "=") { e.preventDefault(); handleZoom("in", "cashflow"); } else if (e.key === "-" || e.key === "_") { e.preventDefault(); handleZoom("out", "cashflow"); } };
-    el.addEventListener("mousedown", onMouseDown); el.addEventListener("mouseup", onMouseUp); el.addEventListener("wheel", onWheel, { passive: false }); el.addEventListener("keydown", onKeyDown);
-    return () => { el.removeEventListener("mousedown", onMouseDown); el.removeEventListener("mouseup", onMouseUp); el.removeEventListener("wheel", onWheel); el.removeEventListener("keydown", onKeyDown); };
+    el.addEventListener("mousedown", onMouseDown); document.addEventListener("mouseup", onMouseUp); el.addEventListener("wheel", onWheel, { passive: false }); el.addEventListener("keydown", onKeyDown);
+    return () => { el.removeEventListener("mousedown", onMouseDown); document.removeEventListener("mouseup", onMouseUp); el.removeEventListener("wheel", onWheel); el.removeEventListener("keydown", onKeyDown); };
   }, [s.overviewCashflowView, s.overviewCashflowCumulative]);
 
   useEffect(() => {
@@ -591,8 +591,8 @@ export function App() {
     };
     const onWheel = (e: WheelEvent) => { e.preventDefault(); handleZoom(e.deltaY < 0 ? "in" : "out", "equity"); };
     const onKeyDown = (e: KeyboardEvent) => { if (e.key === "+" || e.key === "=") { e.preventDefault(); handleZoom("in", "equity"); } else if (e.key === "-" || e.key === "_") { e.preventDefault(); handleZoom("out", "equity"); } };
-    el.addEventListener("mousedown", onMouseDown); el.addEventListener("mouseup", onMouseUp); el.addEventListener("wheel", onWheel, { passive: false }); el.addEventListener("keydown", onKeyDown);
-    return () => { el.removeEventListener("mousedown", onMouseDown); el.removeEventListener("mouseup", onMouseUp); el.removeEventListener("wheel", onWheel); el.removeEventListener("keydown", onKeyDown); };
+    el.addEventListener("mousedown", onMouseDown); document.addEventListener("mouseup", onMouseUp); el.addEventListener("wheel", onWheel, { passive: false }); el.addEventListener("keydown", onKeyDown);
+    return () => { el.removeEventListener("mousedown", onMouseDown); document.removeEventListener("mouseup", onMouseUp); el.removeEventListener("wheel", onWheel); el.removeEventListener("keydown", onKeyDown); };
   }, []);
 
   // Control panel groups
