@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DEFAULTS, loadState, persistState, type ProjectionState } from "./state";
 import { addMonths, asNumber, compactMoney, escapeHtml, exactDateLabel, money, monthOptions, numberFormatter, parseStartDate } from "./format";
 import {
@@ -417,8 +417,12 @@ export function App() {
   const variants = useMemo(() => scenarioVariants(s, DEFAULTS), [s]);
   const yearCount = Math.max(1, Math.round(s.years));
 
-  // Cashflow window info
-  const cfw = normalizedCashflowWindow(s, cashRows.length);
+  // Overview cashflow rows (used for the overview chart and its zoom/window controls)
+  const overviewBaseRows = cashflowDisplayRows(s, DEFAULTS, renderModel, s.overviewCashflowView);
+  const overviewRows = s.overviewCashflowCumulative ? cumulativeCashflowRows(overviewBaseRows as any[]) : overviewBaseRows;
+
+  // Cashflow window info — derived from overview rows, not detail rows
+  const cfw = normalizedCashflowWindow(s, overviewRows.length);
   const eqw = normalizedEquityWindow(s, renderModel.rows.length);
 
   // Equity point detail
@@ -426,6 +430,10 @@ export function App() {
   const equityPointDetail = !equityPointRow || equityPointRow.sharesVested <= 0
     ? "Select a point to inspect vested value and cumulative equity."
     : `${equityPointRow.month}: Vested ${numberFormatter.format(equityPointRow.sharesVested)} shares worth ${money(s, equityPointRow.equityValue)}. Cumulative equity: ${money(s, equityPointRow.cumulativeEquityValue)}. Share price: ${money(s, equityPointRow.projectedSharePrice, s.equityCurrency)}.`;
+
+  // Chart container refs for gesture handlers
+  const cashflowChartRef = useRef<HTMLDivElement>(null);
+  const equityChartRef = useRef<HTMLDivElement>(null);
 
   // Mix period select handler
   const mixSelectRef = useRef<HTMLSelectElement>(null);
@@ -530,6 +538,51 @@ export function App() {
       return next;
     });
   };
+
+  // Chart gesture handlers: drag-to-select, wheel zoom, keyboard zoom
+  useEffect(() => {
+    const el = cashflowChartRef.current;
+    if (!el) return;
+    let isDragging = false;
+    let dragStartX = 0;
+    const onMouseDown = (e: MouseEvent) => { isDragging = true; dragStartX = e.clientX; el.style.cursor = "ew-resize"; };
+    const onMouseUp = (e: MouseEvent) => {
+      if (!isDragging) return;
+      isDragging = false; el.style.cursor = "";
+      const rect = el.getBoundingClientRect();
+      const dragEndX = e.clientX;
+      if (Math.abs(dragEndX - dragStartX) < 5) return;
+      const startRatio = Math.max(0, Math.min(1, (Math.min(dragStartX, dragEndX) - rect.left) / rect.width));
+      const endRatio = Math.max(0, Math.min(1, (Math.max(dragStartX, dragEndX) - rect.left) / rect.width));
+      setState((prev) => { const next = { ...prev }; const rows = cashflowDisplayRows(next, DEFAULTS, projectionFor(next, DEFAULTS), next.overviewCashflowView); const allRows = next.overviewCashflowCumulative ? cumulativeCashflowRows(rows as any[]) : rows; selectCashflowWindowByRatios(next, allRows.length, startRatio, endRatio); persistState(next); return next; });
+    };
+    const onWheel = (e: WheelEvent) => { e.preventDefault(); handleZoom(e.deltaY < 0 ? "in" : "out", "cashflow"); };
+    const onKeyDown = (e: KeyboardEvent) => { if (e.key === "+" || e.key === "=") { e.preventDefault(); handleZoom("in", "cashflow"); } else if (e.key === "-" || e.key === "_") { e.preventDefault(); handleZoom("out", "cashflow"); } };
+    el.addEventListener("mousedown", onMouseDown); el.addEventListener("mouseup", onMouseUp); el.addEventListener("wheel", onWheel, { passive: false }); el.addEventListener("keydown", onKeyDown);
+    return () => { el.removeEventListener("mousedown", onMouseDown); el.removeEventListener("mouseup", onMouseUp); el.removeEventListener("wheel", onWheel); el.removeEventListener("keydown", onKeyDown); };
+  }, [s.overviewCashflowView, s.overviewCashflowCumulative]);
+
+  useEffect(() => {
+    const el = equityChartRef.current;
+    if (!el) return;
+    let isDragging = false;
+    let dragStartX = 0;
+    const onMouseDown = (e: MouseEvent) => { isDragging = true; dragStartX = e.clientX; el.style.cursor = "ew-resize"; };
+    const onMouseUp = (e: MouseEvent) => {
+      if (!isDragging) return;
+      isDragging = false; el.style.cursor = "";
+      const rect = el.getBoundingClientRect();
+      const dragEndX = e.clientX;
+      if (Math.abs(dragEndX - dragStartX) < 5) return;
+      const startRatio = Math.max(0, Math.min(1, (Math.min(dragStartX, dragEndX) - rect.left) / rect.width));
+      const endRatio = Math.max(0, Math.min(1, (Math.max(dragStartX, dragEndX) - rect.left) / rect.width));
+      setState((prev) => { const next = { ...prev }; const m = projectionFor(next, DEFAULTS); selectEquityWindowByRatios(next, m.rows.length, startRatio, endRatio); persistState(next); return next; });
+    };
+    const onWheel = (e: WheelEvent) => { e.preventDefault(); handleZoom(e.deltaY < 0 ? "in" : "out", "equity"); };
+    const onKeyDown = (e: KeyboardEvent) => { if (e.key === "+" || e.key === "=") { e.preventDefault(); handleZoom("in", "equity"); } else if (e.key === "-" || e.key === "_") { e.preventDefault(); handleZoom("out", "equity"); } };
+    el.addEventListener("mousedown", onMouseDown); el.addEventListener("mouseup", onMouseUp); el.addEventListener("wheel", onWheel, { passive: false }); el.addEventListener("keydown", onKeyDown);
+    return () => { el.removeEventListener("mousedown", onMouseDown); el.removeEventListener("mouseup", onMouseUp); el.removeEventListener("wheel", onWheel); el.removeEventListener("keydown", onKeyDown); };
+  }, []);
 
   // Control panel groups
   const controlGroups = [
@@ -700,16 +753,16 @@ export function App() {
                       <button key={c.key} type="button" className={`component-filter ${c.className.replace("-fill", "")}${s.cashflowComponents?.[c.key] === false ? " is-muted" : ""}`} data-cashflow-component={c.key} aria-pressed={s.cashflowComponents?.[c.key] !== false} onClick={() => handleComponentToggle(c.key)}>{c.label}</button>
                     ))}
                   </div>
-                  <div id="cashflowChart" className="chart-box" tabIndex={0} aria-label="Compensation cashflow chart" title="Drag to select a range, or scroll over chart to zoom" dangerouslySetInnerHTML={{ __html: chartData.html }} />
+                  <div id="cashflowChart" ref={cashflowChartRef} className="chart-box" tabIndex={0} aria-label="Compensation cashflow chart" title="Drag to select a range, or scroll over chart to zoom" dangerouslySetInnerHTML={{ __html: chartData.html }} />
                   <div className="cashflow-window-panel" aria-label="Cashflow zoom pane">
                     <div className="cashflow-window-header">
                       <span>Zoom pane</span>
-                      <span id="cashflowWindowLabel">{cfw.visibleCount === cfw.total ? "Selected: All periods" : `Selected: ${(cashRows as any[])[cfw.start]?.month} - ${(cashRows as any[])[cfw.end - 1]?.month} (${cfw.visibleCount}/${cfw.total} ${s.overviewCashflowView === "annual" ? "years" : "months"})`}</span>
+                      <span id="cashflowWindowLabel">{cfw.visibleCount === cfw.total ? "Selected: All periods" : `Selected: ${(overviewRows as any[])[cfw.start]?.month} - ${(overviewRows as any[])[cfw.end - 1]?.month} (${cfw.visibleCount}/${cfw.total} ${s.overviewCashflowView === "annual" ? "years" : "months"})`}</span>
                     </div>
                     <div id="cashflowWindowOverview" className="cashflow-window-overview" aria-hidden="true" dangerouslySetInnerHTML={{ __html: windowPaneHtml }} />
                     <div className="cashflow-window-ranges">
-                      <label>Start<input id="cashflowWindowStart" type="range" min={0} max={Math.max(0, (cashRows as any[]).length - 1)} step={1} value={cfw.start} onChange={(e) => handleWindowRange("cashflow", "start", Math.round(Number(e.target.value)), (cashRows as any[]).length)} /></label>
-                      <label>End<input id="cashflowWindowEnd" type="range" min={1} max={(cashRows as any[]).length} step={1} value={cfw.end} onChange={(e) => handleWindowRange("cashflow", "end", Math.round(Number(e.target.value)), (cashRows as any[]).length)} /></label>
+                      <label>Start<input id="cashflowWindowStart" type="range" min={0} max={Math.max(0, (overviewRows as any[]).length - 1)} step={1} value={cfw.start} onChange={(e) => handleWindowRange("cashflow", "start", Math.round(Number(e.target.value)), (overviewRows as any[]).length)} /></label>
+                      <label>End<input id="cashflowWindowEnd" type="range" min={1} max={(overviewRows as any[]).length} step={1} value={cfw.end} onChange={(e) => handleWindowRange("cashflow", "end", Math.round(Number(e.target.value)), (overviewRows as any[]).length)} /></label>
                     </div>
                   </div>
                 </article>
@@ -833,7 +886,7 @@ export function App() {
                       </div>
                     </div>
                   </div>
-                  <div id="equityChart" className="chart-box" tabIndex={0} aria-label="Equity valuation growth chart" title="Drag to select a range, or scroll over chart to zoom" dangerouslySetInnerHTML={{ __html: equitySvg }} onClick={(e) => {
+                  <div id="equityChart" ref={equityChartRef} className="chart-box" tabIndex={0} aria-label="Equity valuation growth chart" title="Drag to select a range, or scroll over chart to zoom" dangerouslySetInnerHTML={{ __html: equitySvg }} onClick={(e) => {
                     const target = (e.target as HTMLElement).closest("[data-equity-index]");
                     if (target) {
                       const idx = target.getAttribute("data-equity-index");
