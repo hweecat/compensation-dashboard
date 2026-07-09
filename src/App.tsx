@@ -546,14 +546,20 @@ export function App() {
     let isDragging = false;
     let dragStartX = 0;
     const onMouseDown = (e: MouseEvent) => { isDragging = true; dragStartX = e.clientX; el.style.cursor = "ew-resize"; };
+// Use the SVG element (not just the container) so the ratio reflects the
+// scrolled position within the chart. getBoundingClientRect on the SVG
+// already accounts for scrollLeft because the SVG is laid out inside the
+// scrollable .chart-box container.
     const onMouseUp = (e: MouseEvent) => {
       if (!isDragging) return;
       isDragging = false; el.style.cursor = "";
-      const rect = el.getBoundingClientRect();
+      const svg = el.querySelector("svg") as SVGSVGElement | null;
+      const targetRect = svg ? svg.getBoundingClientRect() : el.getBoundingClientRect();
+      const targetWidth = targetRect.width || 1;
       const dragEndX = e.clientX;
       if (Math.abs(dragEndX - dragStartX) < 5) return;
-      const startRatio = Math.max(0, Math.min(1, (Math.min(dragStartX, dragEndX) - rect.left) / rect.width));
-      const endRatio = Math.max(0, Math.min(1, (Math.max(dragStartX, dragEndX) - rect.left) / rect.width));
+      const startRatio = Math.max(0, Math.min(1, (Math.min(dragStartX, dragEndX) - targetRect.left) / targetWidth));
+      const endRatio = Math.max(0, Math.min(1, (Math.max(dragStartX, dragEndX) - targetRect.left) / targetWidth));
       setState((prev) => { const next = { ...prev }; const rows = cashflowDisplayRows(next, DEFAULTS, projectionFor(next, DEFAULTS), next.overviewCashflowView); const allRows = next.overviewCashflowCumulative ? cumulativeCashflowRows(rows as any[]) : rows; selectCashflowWindowByRatios(next, allRows.length, startRatio, endRatio); persistState(next); return next; });
     };
     const onWheel = (e: WheelEvent) => { e.preventDefault(); handleZoom(e.deltaY < 0 ? "in" : "out", "cashflow"); };
@@ -571,11 +577,16 @@ export function App() {
     const onMouseUp = (e: MouseEvent) => {
       if (!isDragging) return;
       isDragging = false; el.style.cursor = "";
-      const rect = el.getBoundingClientRect();
+      // Derive the ratio from the SVG's bounding rect (not just the container)
+      // so the selection accounts for the chart's horizontal scroll position
+      // and full SVG width.
+      const svg = el.querySelector("svg") as SVGSVGElement | null;
+      const targetRect = svg ? svg.getBoundingClientRect() : el.getBoundingClientRect();
+      const targetWidth = targetRect.width || 1;
       const dragEndX = e.clientX;
       if (Math.abs(dragEndX - dragStartX) < 5) return;
-      const startRatio = Math.max(0, Math.min(1, (Math.min(dragStartX, dragEndX) - rect.left) / rect.width));
-      const endRatio = Math.max(0, Math.min(1, (Math.max(dragStartX, dragEndX) - rect.left) / rect.width));
+      const startRatio = Math.max(0, Math.min(1, (Math.min(dragStartX, dragEndX) - targetRect.left) / targetWidth));
+      const endRatio = Math.max(0, Math.min(1, (Math.max(dragStartX, dragEndX) - targetRect.left) / targetWidth));
       setState((prev) => { const next = { ...prev }; const m = projectionFor(next, DEFAULTS); selectEquityWindowByRatios(next, m.rows.length, startRatio, endRatio); persistState(next); return next; });
     };
     const onWheel = (e: WheelEvent) => { e.preventDefault(); handleZoom(e.deltaY < 0 ? "in" : "out", "equity"); };
