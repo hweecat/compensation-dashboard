@@ -96,6 +96,7 @@
   overflow-y: hidden;
   overscroll-behavior: contain;
   cursor: crosshair;
+  -webkit-user-select: none;
   user-select: none;
 }
 
