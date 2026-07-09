@@ -645,16 +645,16 @@ export function App() {
         <div className="brand-mark" aria-hidden="true">
           <svg viewBox="0 0 32 32"><path d="M7 21.5 14.2 9l4.2 7.4 2.4-4.1L25 19.5" /><path d="M6 24.5h20" /></svg>
         </div>
-        <button className={`rail-item${activeTab === "overview" ? " is-active" : ""}`} data-tab="overview" aria-label="Overview" onClick={() => setActiveTab("overview")}>
+        <button className={`rail-item${activeTab === "overview" ? " is-active" : ""}`} data-tab="overview" aria-current={activeTab === "overview" ? "page" : undefined} aria-label="Overview" onClick={() => setActiveTab("overview")}>
           <svg viewBox="0 0 24 24"><path d="M4 13h6V4H4v9Zm10 7h6V4h-6v16ZM4 20h6v-4H4v4Z" /></svg>
         </button>
-        <button className={`rail-item${activeTab === "cashflow" ? " is-active" : ""}`} data-tab="cashflow" aria-label="Cashflow" onClick={() => setActiveTab("cashflow")}>
+        <button className={`rail-item${activeTab === "cashflow" ? " is-active" : ""}`} data-tab="cashflow" aria-current={activeTab === "cashflow" ? "page" : undefined} aria-label="Cashflow" onClick={() => setActiveTab("cashflow")}>
           <svg viewBox="0 0 24 24"><path d="M4 19V5m0 14h16M7 15l3-4 3 2 4-7 3 4" /></svg>
         </button>
-        <button className={`rail-item${activeTab === "equity" ? " is-active" : ""}`} data-tab="equity" aria-label="Equity" onClick={() => setActiveTab("equity")}>
+        <button className={`rail-item${activeTab === "equity" ? " is-active" : ""}`} data-tab="equity" aria-current={activeTab === "equity" ? "page" : undefined} aria-label="Equity" onClick={() => setActiveTab("equity")}>
           <svg viewBox="0 0 24 24"><path d="M12 3 4 8l8 5 8-5-8-5Zm-8 9 8 5 8-5M4 16l8 5 8-5" /></svg>
         </button>
-        <button className={`rail-item${activeTab === "scenarios" ? " is-active" : ""}`} data-tab="scenarios" aria-label="Scenarios" onClick={() => setActiveTab("scenarios")}>
+        <button className={`rail-item${activeTab === "scenarios" ? " is-active" : ""}`} data-tab="scenarios" aria-current={activeTab === "scenarios" ? "page" : undefined} aria-label="Scenarios" onClick={() => setActiveTab("scenarios")}>
           <svg viewBox="0 0 24 24"><path d="M5 6h14M5 12h14M5 18h14" /><path d="M8 4v4M16 10v4M11 16v4" /></svg>
         </button>
       </aside>
@@ -709,10 +709,10 @@ export function App() {
 
           <section className="main-panel">
             <nav className="tab-strip" aria-label="Dashboard sections">
-              <button className={`tab-button${activeTab === "overview" ? " is-active" : ""}`} data-tab="overview" onClick={() => setActiveTab("overview")}>Overview</button>
-              <button className={`tab-button${activeTab === "cashflow" ? " is-active" : ""}`} data-tab="cashflow" onClick={() => setActiveTab("cashflow")}>Cashflow</button>
-              <button className={`tab-button${activeTab === "equity" ? " is-active" : ""}`} data-tab="equity" onClick={() => setActiveTab("equity")}>Equity</button>
-              <button className={`tab-button${activeTab === "scenarios" ? " is-active" : ""}`} data-tab="scenarios" onClick={() => setActiveTab("scenarios")}>Scenarios</button>
+              <button className={`tab-button${activeTab === "overview" ? " is-active" : ""}`} data-tab="overview" aria-current={activeTab === "overview" ? "page" : undefined} onClick={() => setActiveTab("overview")}>Overview</button>
+              <button className={`tab-button${activeTab === "cashflow" ? " is-active" : ""}`} data-tab="cashflow" aria-current={activeTab === "cashflow" ? "page" : undefined} onClick={() => setActiveTab("cashflow")}>Cashflow</button>
+              <button className={`tab-button${activeTab === "equity" ? " is-active" : ""}`} data-tab="equity" aria-current={activeTab === "equity" ? "page" : undefined} onClick={() => setActiveTab("equity")}>Equity</button>
+              <button className={`tab-button${activeTab === "scenarios" ? " is-active" : ""}`} data-tab="scenarios" aria-current={activeTab === "scenarios" ? "page" : undefined} onClick={() => setActiveTab("scenarios")}>Scenarios</button>
             </nav>
 
             {/* Overview tab */}

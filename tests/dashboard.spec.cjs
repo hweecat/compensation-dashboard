@@ -84,10 +84,12 @@ test("overview charts render core compensation components", async ({ page, url }
 test("module app boots without legacy app.js fallback", async ({ page, url }) => {
   const indexHtml = fs.readFileSync(indexHtmlPath, "utf8");
   assert.doesNotMatch(indexHtml, /app\.js/, "index.html should not depend on the legacy app.js runtime");
+  assert.doesNotMatch(indexHtml, /src\/standalone\.js/, "index.html should not depend on the legacy standalone.js runtime");
+  // Vite emits a hashed module script tag referencing /assets/index-*.js
+  assert.match(indexHtml, /\/assets\/index-[^"']+\.js/, "index.html should reference the Vite hashed module bundle");
 
   await resetPage(page, url);
   await assertPublicDefaults(page);
-  assert.equal(await page.locator("script[src='./src/standalone.js']").count(), 1);
   assert.equal(await page.locator("#summaryCards .summary-card").count(), 4);
 });
 
