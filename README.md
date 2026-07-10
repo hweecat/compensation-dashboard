@@ -8,94 +8,57 @@ The calculator is designed for offer and employment-package analysis where cash 
 
 ## Design
 
-The app is a zero-build static dashboard. The browser entrypoint is:
-
-- `outputs/compensation-dashboard/index.html`
+The app is a Vite + React 18 + TypeScript single-page application. The build output is a static site deployed to GitHub Pages.
 
 The maintainable source modules live in:
 
-- `src/`
-
-The maintainable HTML component generator lives in:
-
-- `tools/build-html.py`
-
-The HTML generator is organized into layered component functions:
-
-- Markup primitives such as attributes, tags, SVGs, and buttons.
-- Shared UI components such as panel headers, panels, tables, segmented controls, and zoom panes.
-- Independent layout components for the base document, app shell, navigation rail, workspace, topbar, dashboard grid, assumptions area, main panel, tab strip, and tab panels.
-- Tab components for Overview, Cashflow, Equity, and Scenarios.
-- A final composer that renders the static `index.html`.
-
-Each layout component returns a complete, closed HTML element and receives its children explicitly, so `render_index()` reads like the DOM tree shown in browser DevTools: document, main shell, navigation and workspace, then headers, dashboard grid, panels, and tab content.
-
-The generated browser runtime lives in:
-
-- `outputs/compensation-dashboard/src/standalone.js`
-
-The maintainable stylesheet sources live in:
-
-- `src/styles/`
-
-The generated static stylesheets live in:
-
-- `styles.css`
-- `outputs/compensation-dashboard/styles.css`
-
-Regenerate all static browser assets with:
-
-```powershell
-C:\Users\ongch\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe tools\build-static.cjs
-```
-
-`index.html` is generated from Python HTML component functions by:
-
-```powershell
-C:\Users\ongch\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe tools\build-html.py
-```
-
-`standalone.js` is generated from the source modules by:
-
-```powershell
-C:\Users\ongch\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe tools\build-standalone.cjs
-```
-
-The CSS outputs are generated from component CSS source files by:
-
-```powershell
-C:\Users\ongch\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe tools\build-styles.cjs
-```
-
-This keeps the HTML, source code, and styles split into small component-style units while preserving direct `file://` usage from `index.html`. Direct ES module loading is not reliable from `file://` in Chromium-based browsers because module imports can be blocked by CORS policy, so the checked-in standalone runtime is the static browser target. The checked-in static HTML and stylesheet remain single files because browsers load `index.html` and `./styles.css` directly.
-
-For ordinary edits, change `tools/build-html.py`, files under `src/`, or files under `src/styles/`, then run `tools/build-static.cjs`. The individual `tools/build-html.py`, `tools/build-standalone.cjs`, and `tools/build-styles.cjs` scripts remain available when regenerating only one side is useful.
+- `src/` — TypeScript/TSX components, state, model, and formatting logic
 
 Core source areas:
 
-- `src/state.js`: default inputs, localStorage loading, and persistence.
-- `src/model.js`: compensation projection math, vesting logic, currency conversion, row builders, zoom-window helpers, and scenario sensitivity.
-- `src/format.js`: date, currency, HTML escaping, and filename formatting.
-- `src/components/controls.js`: assumption controls.
-- `src/components/charts.js`: cashflow chart, equity chart, compensation mix, and zoom panes.
-- `src/components/tables.js`: summary cards, cashflow tables, vesting tables, equity stats, and scenario tables.
-- `src/export.js`: CSV and shareable HTML report generation.
-- `src/main.js`: app orchestration and event wiring.
-- `tools/build-html.py`: layered Python HTML component functions used to generate the static entrypoint.
-- `src/styles/*.css`: component CSS sources used to generate the static stylesheets.
-- `tools/build-static.cjs`: one-command generator for static HTML, CSS, and JS browser assets.
+- `src/state.ts`: default inputs, localStorage loading, and persistence.
+- `src/model.ts`: compensation projection math, vesting logic, currency conversion, row builders, zoom-window helpers, and scenario sensitivity.
+- `src/format.ts`: date, currency, HTML escaping, and filename formatting.
+- `src/App.tsx`: top-level layout, tab routing, and event wiring.
+- `src/main.tsx`: React entrypoint, mounts `<App />` into `#root`.
+- `src/components/`: React components for controls, charts, and tables.
+- `src/styles/*.css`: component CSS sources imported by the Vite build.
+
+The Vite entrypoint is:
+
+- `index.html` — contains `<div id="root"></div>` and loads `/src/main.tsx`
+
+Build the static site with:
+
+```bash
+npm run build
+```
+
+This runs `vite build` and emits the production bundle to `dist/`. Vite handles TypeScript compilation, CSS minification (via Lightning CSS), tree-shaking, and code splitting.
+
+For local development with hot module replacement:
+
+```bash
+npm run dev
+```
+
+For previewing the production build locally:
+
+```bash
+npm run preview
+```
 
 ## Deployment
 
 The static dashboard publishes from:
 
-- `outputs/compensation-dashboard/`
+- `dist/`
 
 GitHub Pages deployment is defined in:
 
 - `.github/workflows/deploy-pages.yml`
 
-The workflow runs on pushes to `main` and through manual dispatch. It installs Node.js and Python, regenerates the static dashboard, runs the regression tests, uploads `outputs/compensation-dashboard/` as the Pages artifact, and deploys to the default GitHub Pages URL for the repository. The exact published URL is shown in the successful deployment output.
+The workflow runs on pushes to `main` and through manual dispatch. It installs Node.js, builds the dashboard with `npm run build`, runs the regression tests, uploads `dist/` as the Pages artifact, and deploys to the default GitHub Pages URL for the repository. The exact published URL is shown in the successful deployment output.
 
 Published dashboard:
 
@@ -103,7 +66,7 @@ Published dashboard:
 
 The checked-in defaults are public sample assumptions, not private compensation data. Before publishing new examples, run:
 
-```powershell
+```bash
 npm run build
 npm test
 ```
@@ -124,12 +87,18 @@ npm test
 
 ## Testing
 
-Regression tests are stored in `tests/` and can be run with the bundled Node runtime:
+Regression tests are stored in `tests/` and can be run with:
 
-```powershell
-C:\Users\ongch\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe tests\dashboard.spec.cjs
-C:\Users\ongch\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe tests\file-module-load.cjs
-C:\Users\ongch\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe tests\source-layout.spec.cjs
-C:\Users\ongch\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe tests\html-structure.spec.cjs
-C:\Users\ongch\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe tests\style-structure.spec.cjs
+```bash
+npm test
 ```
+
+This runs the structure tests (source layout, public defaults, HTML structure, style structure) and the browser tests (dashboard spec, file module load).
+
+Vitest unit tests for the math and formatting layers:
+
+```bash
+npm run test:vitest
+```
+
+These cover `src/model.ts` and `src/format.ts` with 61 assertions.

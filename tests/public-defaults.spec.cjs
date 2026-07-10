@@ -4,10 +4,10 @@ const path = require("node:path");
 
 const workspaceRoot = path.resolve(__dirname, "..");
 
-const checkedFiles = [
-  "src/state.js",
-  "outputs/compensation-dashboard/src/standalone.js",
-];
+// Check the TS source for public/private defaults. The minified Vite bundle
+// is not checked because esbuild converts numeric literals to scientific
+// notation (e.g. 120000 → 12e4), making regex matching unreliable.
+const checkedFiles = ["src/state.ts"];
 
 const publicDefaults = {
   scenarioName: "Compensation Projection",
@@ -39,7 +39,7 @@ function escapeRegExp(value) {
 
 function defaultPattern(key, value) {
   const serializedValue = typeof value === "string" ? `"${escapeRegExp(value)}"` : String(value);
-  return new RegExp(`\\b${escapeRegExp(key)}\\s*:\\s*${serializedValue}`);
+  return new RegExp(`\\b${escapeRegExp(key)}\\s*[:=]\\s*${serializedValue}`);
 }
 
 for (const relativePath of checkedFiles) {
