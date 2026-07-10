@@ -5,14 +5,8 @@ const { performance } = require("node:perf_hooks");
 const { chromium } = require("C:/Users/ongch/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/.pnpm/playwright-core@1.60.0/node_modules/playwright-core");
 const { serveStatic } = require("./helpers/static-server.cjs");
 
-const appRoot = path.resolve(__dirname, "../dist");
+const appRoot = path.resolve(__dirname, "../outputs/compensation-dashboard");
 const chromePath = "C:/Program Files/Google/Chrome/Application/chrome.exe";
-
-// TODO(migration): the legacy-baseline trick (swap standalone.js for app.js
-// in index.html) does not work for the Vite output, which uses hashed asset
-// names like /assets/index-XXXXX.js. Rewrite this test after commit 5 lands
-// the real React app, e.g. by comparing two Vite builds (with vs. without
-// minification) or by sourcing the legacy bundle from git history.
 
 function median(values) {
   const sorted = [...values].sort((a, b) => a - b);
