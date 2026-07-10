@@ -8,17 +8,15 @@ import {
   currencyRateFormatter,
   parseStartDate,
   safeFileName,
-} from "./format";
+} from "./format.js";
 import {
   annualCashflowRows,
   cashflowDisplayRows,
   projectionFor,
   scenarioVariants,
-} from "./model";
-import type { ProjectionState } from "./state";
-import type { ScenarioVariant } from "./model";
+} from "./model.js";
 
-export function exportFile(content: string, fileName: string, type: string): void {
+export function exportFile(content, fileName, type) {
   const blob = new Blob([content], { type });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -30,7 +28,7 @@ export function exportFile(content: string, fileName: string, type: string): voi
   URL.revokeObjectURL(url);
 }
 
-export function exportCsv(state: ProjectionState, defaults: ProjectionState): void {
+export function exportCsv(state, defaults) {
   const model = projectionFor(state, defaults);
   const header = [
     "Month",
@@ -56,13 +54,13 @@ export function exportCsv(state: ProjectionState, defaults: ProjectionState): vo
   exportFile(csv, safeFileName(state.scenarioName, ".csv"), "text/csv;charset=utf-8");
 }
 
-function tableRows<T>(rows: T[], cells: Array<(row: T) => string>): string {
+function tableRows(rows, cells) {
   return rows
     .map((row) => `<tr>${cells.map((cell) => `<td>${escapeHtml(cell(row))}</td>`).join("")}</tr>`)
     .join("");
 }
 
-export function exportHtmlReport(state: ProjectionState, defaults: ProjectionState): void {
+export function exportHtmlReport(state, defaults) {
   const model = projectionFor(state, defaults);
   const annualRows = annualCashflowRows(model.rows);
   const monthlyRows = cashflowDisplayRows(state, defaults, model, "monthly");
@@ -71,7 +69,7 @@ export function exportHtmlReport(state: ProjectionState, defaults: ProjectionSta
   const horizonLabel = `${yearCount} year horizon`;
   const includeScenarios = Number(state.rsuGrantValue || 0) > 0;
   const variants = scenarioVariants(state, defaults);
-  const assumptions: Array<[string, string]> = [
+  const assumptions = [
     ["Projection period", `${exactDateLabel(parseStartDate(state, defaults))} to ${exactDateLabel(addMonths(parseStartDate(state, defaults), state.years * 12))}`],
     ["Base salary", `${money(state, state.baseSalary, state.cashCurrency)} ${state.salaryBasis}`],
     ["Bonus", `${numberFormatter.format(state.bonusPercent)}% paid in ${monthOptions().find(([month]) => month === state.bonusMonth)?.[1] || "selected month"}`],
@@ -168,10 +166,10 @@ export function exportHtmlReport(state: ProjectionState, defaults: ProjectionSta
           </tr>
         </thead>
         <tbody>${tableRows(variants, [
-          (row: ScenarioVariant) => `${row.growth}% annual equity growth`,
-          ...Array.from({ length: yearCount }, (_, index) => (row: ScenarioVariant) => money(state, row.annualRows[index]?.total || 0)),
-          (row: ScenarioVariant) => money(state, row.total),
-          (row: ScenarioVariant) => `${row.delta >= 0 ? "+" : ""}${money(state, row.delta)}`,
+          (row) => `${row.growth}% annual equity growth`,
+          ...Array.from({ length: yearCount }, (_, index) => (row) => money(state, row.annualRows[index]?.total || 0)),
+          (row) => money(state, row.total),
+          (row) => `${row.delta >= 0 ? "+" : ""}${money(state, row.delta)}`,
         ])}</tbody>
       </table>
     </section>`

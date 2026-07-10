@@ -4,25 +4,12 @@ const path = require("node:path");
 
 const root = path.resolve(__dirname, "..");
 const sourceRoot = path.join(root, "src");
-
-// TS/React source files (the migration target)
+const outputSourceRoot = path.join(root, "outputs/compensation-dashboard/src");
+const buildStaticPath = path.join(root, "tools/build-static.cjs");
+const buildHtmlPath = path.join(root, "tools/build-html.py");
+const buildStandalonePath = path.join(root, "tools/build-standalone.cjs");
+const buildStylesPath = path.join(root, "tools/build-styles.cjs");
 const expectedSourceFiles = [
-  "App.tsx",
-  "dom.ts",
-  "export.ts",
-  "format.ts",
-  "main.tsx",
-  "model.ts",
-  "state.ts",
-  "vite-env.d.ts",
-];
-
-for (const file of expectedSourceFiles) {
-  assert.ok(fs.existsSync(path.join(sourceRoot, file)), `Expected TS/React source module at src/${file}`);
-}
-
-// Old JS source files should NOT exist (deleted in commit 8)
-const deletedFiles = [
   "dom.js",
   "export.js",
   "format.js",
@@ -34,34 +21,42 @@ const deletedFiles = [
   "components/tables.js",
 ];
 
-for (const file of deletedFiles) {
-  assert.ok(!fs.existsSync(path.join(sourceRoot, file)), `Old JS source src/${file} should have been deleted`);
+function listFiles(dir) {
+  if (!fs.existsSync(dir)) return [];
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  return entries.flatMap((entry) => {
+    const absolute = path.join(dir, entry.name);
+    if (entry.isDirectory()) return listFiles(absolute);
+    return [path.relative(dir, absolute)];
+  });
 }
 
-// Old tools/ should NOT exist (deleted in commit 8)
-const deletedTools = [
-  "tools/build-html.py",
-  "tools/build-standalone.cjs",
-  "tools/build-static.cjs",
-  "tools/build-styles.cjs",
-];
-
-for (const file of deletedTools) {
-  assert.ok(!fs.existsSync(path.join(root, file)), `Old tool ${file} should have been deleted`);
+for (const file of expectedSourceFiles) {
+  assert.ok(fs.existsSync(path.join(sourceRoot, file)), `Expected source module at src/${file}`);
+  assert.ok(!fs.existsSync(path.join(outputSourceRoot, file)), `Did not expect source module in output src/${file}`);
 }
 
-// Vite config files should exist
-assert.ok(fs.existsSync(path.join(root, "vite.config.ts")), "Expected vite.config.ts at repo root");
-assert.ok(fs.existsSync(path.join(root, "vitest.config.ts")), "Expected vitest.config.ts at repo root");
-assert.ok(fs.existsSync(path.join(root, "tsconfig.json")), "Expected tsconfig.json at repo root");
-assert.ok(fs.existsSync(path.join(root, "index.html")), "Expected Vite entrypoint index.html at repo root");
+assert.ok(fs.existsSync(path.join(outputSourceRoot, "standalone.js")), "Expected generated standalone.js in output src");
+assert.ok(fs.existsSync(buildStaticPath), "Expected tools/build-static.cjs to generate static HTML, CSS, and JS assets");
+assert.ok(fs.existsSync(buildHtmlPath), "Expected tools/build-html.py to generate index.html");
+assert.ok(fs.existsSync(buildStandalonePath), "Expected tools/build-standalone.cjs to generate standalone.js");
+assert.ok(fs.existsSync(buildStylesPath), "Expected tools/build-styles.cjs to generate styles.css");
+
+const buildStaticSource = fs.readFileSync(buildStaticPath, "utf8");
+assert.match(buildStaticSource, /build-html\.py/, "Combined generator should run the Python HTML generator");
+assert.match(buildStaticSource, /build-styles\.cjs/, "Combined generator should run the CSS generator");
+assert.match(buildStaticSource, /build-standalone\.cjs/, "Combined generator should run the JS generator");
+
+const remainingOutputFiles = listFiles(outputSourceRoot).map((file) => file.replaceAll("\\", "/")).sort();
+assert.deepEqual(remainingOutputFiles, ["standalone.js"], "Output src should contain only generated standalone.js");
 
 const readme = fs.readFileSync(path.join(root, "README.md"), "utf8");
 assert.match(readme, /Total Compensation Calculator/i);
 assert.match(readme, /Objective/i);
 assert.match(readme, /Design/i);
 assert.match(readme, /Assumptions/i);
-assert.match(readme, /vite build/i, "README should mention vite build");
+assert.match(readme, /tools\\build-static\.cjs|tools\/build-static\.cjs/i);
+assert.match(readme, /build-html\.py/i);
 assert.match(readme, /src\/styles/i);
 
 const docs = [
