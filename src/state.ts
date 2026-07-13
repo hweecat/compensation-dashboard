@@ -5,6 +5,8 @@ export interface CashflowComponents {
   equityValue: boolean;
 }
 
+export type EquityTaxTreatment = "ordinary" | "capitalGains";
+
 export interface ProjectionState {
   scenarioName: string;
   startDate: string;
@@ -43,6 +45,17 @@ export interface ProjectionState {
   customVestingPattern: string;
   customVestingSpread: string;
   cliffMonths: number;
+  // Tax configuration (effective rates as percentages)
+  taxRateSalary: number;
+  taxRateBonus: number;
+  taxRateSignOn: number;
+  taxRateEquity: number;
+  equityTaxTreatment: EquityTaxTreatment;
+  // Monte Carlo simulation configuration
+  monteCarloEnabled: boolean;
+  equityVolatility: number;
+  monteCarloRuns: number;
+  monteCarloConfidence: number;
 }
 
 export const DEFAULTS: ProjectionState = {
@@ -88,6 +101,17 @@ export const DEFAULTS: ProjectionState = {
   customVestingPattern: "25:25:25:25",
   customVestingSpread: "quarterly",
   cliffMonths: 0,
+  // Tax defaults (0 = no tax for backward compatibility)
+  taxRateSalary: 0,
+  taxRateBonus: 0,
+  taxRateSignOn: 0,
+  taxRateEquity: 0,
+  equityTaxTreatment: "ordinary",
+  // Monte Carlo defaults
+  monteCarloEnabled: false,
+  equityVolatility: 30,
+  monteCarloRuns: 1000,
+  monteCarloConfidence: 90,
 };
 
 type StorageLike = Pick<Storage, "getItem" | "setItem">;
