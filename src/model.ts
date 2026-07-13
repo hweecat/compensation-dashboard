@@ -643,7 +643,7 @@ export function runMonteCarlo(
   state: ProjectionState,
   defaults: ProjectionState,
 ): MonteCarloResult {
-  const runs = Math.min(10000, Math.max(100, Math.round(state.monteCarloRuns || 1000)));
+  const runs = Math.min(1000000, Math.max(100, Math.round(state.monteCarloRuns || 1000)));
   const confidence = Math.max(50, Math.min(99, state.monteCarloConfidence || 90));
   const volatility = Math.max(0, state.equityVolatility || 30) / 100;
   const drift = (state.annualEquityGrowth || 0) / 100;

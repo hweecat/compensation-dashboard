@@ -980,7 +980,7 @@ export function App() {
         { type: "toggle", labelText: "Enable Monte Carlo", key: "monteCarloEnabled" as const },
         ...(s.monteCarloEnabled ? [
           { type: "field" as const, labelText: "Volatility %", key: "equityVolatility" as const, inputType: "number", options: { min: 0, max: 200, step: 1, help: "Annual std dev" } },
-          { type: "field" as const, labelText: "Simulations", key: "monteCarloRuns" as const, inputType: "number", options: { min: 100, max: 10000, step: 100 } },
+          { type: "field" as const, labelText: "Simulations", key: "monteCarloRuns" as const, inputType: "number", options: { min: 100, max: 1000000, step: 100 } },
           { type: "select" as const, labelText: "Confidence", key: "monteCarloConfidence" as const, options: [[80, "80%"], [90, "90%"], [95, "95%"], [99, "99%"]] as Array<[number, string]> },
         ] : []),
       ],
