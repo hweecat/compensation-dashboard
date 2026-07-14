@@ -27,10 +27,14 @@ import {
   totalsForRows,
   visibleCashflowComponents,
   annualCashflowRows,
+  runMonteCarlo,
+  monteCarloHistogram,
+  applyTax,
+  type MonteCarloResult,
 } from "./model";
 import { exportCsv, exportHtmlReport } from "./export";
 
-type TabKey = "overview" | "cashflow" | "equity" | "scenarios";
+type TabKey = "overview" | "cashflow" | "equity" | "scenarios" | "risk";
 
 // ── Chart SVG generators (pure functions returning HTML strings) ──
 
@@ -306,6 +310,318 @@ function SegmentedField({ state, fieldKey, values, onChange }: SegmentedFieldPro
         ))}
       </div>
     </div>
+  );
+}
+
+interface ToggleFieldProps {
+  state: ProjectionState;
+  labelText: string;
+  fieldKey: keyof ProjectionState;
+  onChange: (key: keyof ProjectionState, value: any) => void;
+}
+
+function ToggleField({ state, labelText, fieldKey, onChange }: ToggleFieldProps) {
+  const isChecked = Boolean(state[fieldKey]);
+  return (
+    <label className="field toggle-field">
+      <span className="field-label-row">
+        {labelText}
+      </span>
+      <div className="toggle-switch">
+        <input
+          type="checkbox"
+          checked={isChecked}
+          onChange={(e) => onChange(fieldKey, e.target.checked)}
+        />
+        <span className="toggle-slider"></span>
+      </div>
+    </label>
+  );
+}
+
+// ── Risk Analysis Panel component ──
+
+interface RiskAnalysisPanelProps {
+  state: ProjectionState;
+  defaults: ProjectionState;
+}
+
+function RiskAnalysisPanel({ state, defaults }: RiskAnalysisPanelProps) {
+  const [mcResult, setMcResult] = useState<MonteCarloResult | null>(null);
+  const [isRunning, setIsRunning] = useState(false);
+
+  const model = useMemo(() => projectionFor(state, defaults), [state]);
+  const deterministicEquity = model.totals.equity;
+  const deterministicTotal = model.totals.total;
+  const deterministicNet = model.totals.totalNet;
+
+  const handleRunSimulation = useCallback(() => {
+    setIsRunning(true);
+    // Use setTimeout to allow UI to update before heavy computation
+    setTimeout(() => {
+      const result = runMonteCarlo(state, defaults);
+      setMcResult(result);
+      setIsRunning(false);
+    }, 50);
+  }, [state, defaults]);
+
+  const histogram = useMemo(() => {
+    if (!mcResult) return [];
+    return monteCarloHistogram(mcResult, 30);
+  }, [mcResult]);
+
+  const histogramSvg = useMemo(() => {
+    if (histogram.length === 0) return "";
+    const width = 600;
+    const height = 200;
+    const pad = { top: 10, right: 20, bottom: 30, left: 50 };
+    const plotWidth = width - pad.left - pad.right;
+    const plotHeight = height - pad.top - pad.bottom;
+    const maxCount = Math.max(...histogram.map((b) => b.count), 1);
+    const barWidth = plotWidth / histogram.length;
+
+    const bars = histogram
+      .map((bin, i) => {
+        const x = pad.left + i * barWidth;
+        const h = (bin.count / maxCount) * plotHeight;
+        const y = pad.top + plotHeight - h;
+        const isInRange =
+          bin.start >= (mcResult?.percentileLow || 0) &&
+          bin.end <= (mcResult?.percentileHigh || Infinity);
+        return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${Math.max(1, barWidth - 1).toFixed(1)}" height="${h.toFixed(1)}" class="${isInRange ? "histogram-bar in-range" : "histogram-bar"}"><title>${money(state, bin.start)} - ${money(state, bin.end)}: ${bin.count} runs (${bin.percent.toFixed(1)}%)</title></rect>`;
+      })
+      .join("");
+
+    const gridLines = [0.25, 0.5, 0.75, 1]
+      .map((r) => {
+        const v = maxCount * r;
+        const yy = pad.top + plotHeight - (v / maxCount) * plotHeight;
+        return `<line class="grid-line" x1="${pad.left}" x2="${width - pad.right}" y1="${yy}" y2="${yy}"></line>`;
+      })
+      .join("");
+
+    const xLabels = [0, 0.25, 0.5, 0.75, 1]
+      .map((r) => {
+        const idx = Math.floor(r * (histogram.length - 1));
+        const bin = histogram[idx];
+        if (!bin) return "";
+        const x = pad.left + idx * barWidth + barWidth / 2;
+        return `<text class="axis-label x-axis-label" x="${x}" y="${height - 5}" text-anchor="middle">${compactMoney(state, bin.start)}</text>`;
+      })
+      .join("");
+
+    return `<svg viewBox="0 0 ${width} ${height}" style="width:100%;max-width:600px" role="img" aria-label="Monte Carlo distribution histogram">${gridLines}${bars}${xLabels}</svg>`;
+  }, [histogram, mcResult, state]);
+
+  // Net take-home summary
+  const netSummaryCards = [
+    ["Gross Total", deterministicTotal, "Before taxes"],
+    ["Net Take-Home", deterministicNet, "After taxes"],
+    ["Total Tax", deterministicTotal - deterministicNet, "Estimated tax burden"],
+    ["Effective Tax Rate", deterministicTotal > 0 ? ((deterministicTotal - deterministicNet) / deterministicTotal) * 100 : 0, "Weighted average"],
+  ] as const;
+
+  return (
+    <>
+      {/* Net Take-Home Summary */}
+      <article className="panel">
+        <div className="panel-title-row">
+          <div>
+            <h2>Net Take-Home Summary</h2>
+            <p>Projected compensation after applying configured tax rates.</p>
+          </div>
+        </div>
+        <div className="summary-grid">
+          {netSummaryCards.map(([label, value, note]) => (
+            <article key={label} className="summary-card">
+              <p>{label}</p>
+              <strong>
+                {label === "Effective Tax Rate"
+                  ? `${(value as number).toFixed(1)}%`
+                  : money(state, value as number)}
+              </strong>
+              <span>{note}</span>
+            </article>
+          ))}
+        </div>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Component</th>
+                <th>Gross</th>
+                <th>Tax Rate</th>
+                <th>Net</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td data-label="Component">Salary</td>
+                <td data-label="Gross">{money(state, model.totals.salary)}</td>
+                <td data-label="Tax Rate">{state.taxRateSalary}%</td>
+                <td data-label="Net">{money(state, model.totals.salaryNet)}</td>
+              </tr>
+              <tr>
+                <td data-label="Component">Bonus</td>
+                <td data-label="Gross">{money(state, model.totals.bonus)}</td>
+                <td data-label="Tax Rate">{state.taxRateBonus}%</td>
+                <td data-label="Net">{money(state, model.totals.bonusNet)}</td>
+              </tr>
+              <tr>
+                <td data-label="Component">Sign-on</td>
+                <td data-label="Gross">{money(state, model.totals.signOn)}</td>
+                <td data-label="Tax Rate">{state.taxRateSignOn}%</td>
+                <td data-label="Net">{money(state, model.totals.signOnNet)}</td>
+              </tr>
+              <tr>
+                <td data-label="Component">Equity</td>
+                <td data-label="Gross">{money(state, model.totals.equity)}</td>
+                <td data-label="Tax Rate">
+                  {state.taxRateEquity}% ({state.equityTaxTreatment === "ordinary" ? "Ordinary" : "Cap Gains"})
+                </td>
+                <td data-label="Net">{money(state, model.totals.equityNet)}</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr>
+                <td data-label="Component">Total</td>
+                <td data-label="Gross">{money(state, model.totals.total)}</td>
+                <td data-label="Tax Rate">—</td>
+                <td data-label="Net">{money(state, model.totals.totalNet)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </article>
+
+      {/* Monte Carlo Simulation */}
+      <article className="panel">
+        <div className="panel-title-row">
+          <div>
+            <h2>Monte Carlo Simulation</h2>
+            <p>
+              Equity value distribution using Geometric Brownian Motion with{" "}
+              {state.equityVolatility}% annual volatility.
+            </p>
+          </div>
+          <div className="panel-actions">
+            <button
+              type="button"
+              className="primary-action"
+              disabled={!state.monteCarloEnabled || isRunning}
+              onClick={handleRunSimulation}
+            >
+              {isRunning ? "Running..." : "Run Simulation"}
+            </button>
+          </div>
+        </div>
+
+        {!state.monteCarloEnabled && (
+          <div className="empty-state">
+            <p>Enable Monte Carlo simulation in the Risk Analysis panel to model equity volatility.</p>
+          </div>
+        )}
+
+        {state.monteCarloEnabled && !mcResult && !isRunning && (
+          <div className="empty-state">
+            <p>Click "Run Simulation" to generate {state.monteCarloRuns} scenarios.</p>
+          </div>
+        )}
+
+        {mcResult && (
+          <>
+            <div className="summary-grid">
+              <article className="summary-card">
+                <p>Deterministic Equity</p>
+                <strong>{money(state, deterministicEquity)}</strong>
+                <span>Fixed growth assumption</span>
+              </article>
+              <article className="summary-card">
+                <p>Median (P50)</p>
+                <strong>{money(state, mcResult.median)}</strong>
+                <span>Most likely outcome</span>
+              </article>
+              <article className="summary-card">
+                <p>Mean</p>
+                <strong>{money(state, mcResult.mean)}</strong>
+                <span>Average across {mcResult.runs} runs</span>
+              </article>
+              <article className="summary-card">
+                <p>{state.monteCarloConfidence}% Range</p>
+                <strong>
+                  {money(state, mcResult.percentileLow)} - {money(state, mcResult.percentileHigh)}
+                </strong>
+                <span>
+                  P{((100 - state.monteCarloConfidence) / 2).toFixed(0)} - P
+                  {(100 - (100 - state.monteCarloConfidence) / 2).toFixed(0)}
+                </span>
+              </article>
+            </div>
+
+            <div className="chart-box" style={{ padding: "1rem" }}>
+              <h3 style={{ margin: "0 0 0.5rem", fontSize: "0.875rem", fontWeight: 500 }}>
+                Equity Value Distribution
+              </h3>
+              <div dangerouslySetInnerHTML={{ __html: histogramSvg }} />
+            </div>
+
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Percentile</th>
+                    <th>Equity Value</th>
+                    <th>vs Deterministic</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td data-label="Percentile">P5 (Worst case)</td>
+                    <td data-label="Equity Value">{money(state, mcResult.distribution[Math.floor(mcResult.runs * 0.05)] || 0)}</td>
+                    <td data-label="vs Deterministic">
+                      {((mcResult.distribution[Math.floor(mcResult.runs * 0.05)] || 0) - deterministicEquity) >= 0 ? "+" : ""}
+                      {money(state, (mcResult.distribution[Math.floor(mcResult.runs * 0.05)] || 0) - deterministicEquity)}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td data-label="Percentile">P25</td>
+                    <td data-label="Equity Value">{money(state, mcResult.distribution[Math.floor(mcResult.runs * 0.25)] || 0)}</td>
+                    <td data-label="vs Deterministic">
+                      {((mcResult.distribution[Math.floor(mcResult.runs * 0.25)] || 0) - deterministicEquity) >= 0 ? "+" : ""}
+                      {money(state, (mcResult.distribution[Math.floor(mcResult.runs * 0.25)] || 0) - deterministicEquity)}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td data-label="Percentile">P50 (Median)</td>
+                    <td data-label="Equity Value">{money(state, mcResult.median)}</td>
+                    <td data-label="vs Deterministic">
+                      {(mcResult.median - deterministicEquity) >= 0 ? "+" : ""}
+                      {money(state, mcResult.median - deterministicEquity)}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td data-label="Percentile">P75</td>
+                    <td data-label="Equity Value">{money(state, mcResult.distribution[Math.floor(mcResult.runs * 0.75)] || 0)}</td>
+                    <td data-label="vs Deterministic">
+                      {((mcResult.distribution[Math.floor(mcResult.runs * 0.75)] || 0) - deterministicEquity) >= 0 ? "+" : ""}
+                      {money(state, (mcResult.distribution[Math.floor(mcResult.runs * 0.75)] || 0) - deterministicEquity)}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td data-label="Percentile">P95 (Best case)</td>
+                    <td data-label="Equity Value">{money(state, mcResult.distribution[Math.floor(mcResult.runs * 0.95)] || 0)}</td>
+                    <td data-label="vs Deterministic">
+                      {((mcResult.distribution[Math.floor(mcResult.runs * 0.95)] || 0) - deterministicEquity) >= 0 ? "+" : ""}
+                      {money(state, (mcResult.distribution[Math.floor(mcResult.runs * 0.95)] || 0) - deterministicEquity)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </article>
+    </>
   );
 }
 
@@ -648,6 +964,27 @@ export function App() {
         { type: "select", labelText: "Cliff", key: "cliffMonths" as const, options: [[0, "No cliff"], [12, "12 months"]] as Array<[string | number, string]> },
       ],
     },
+    {
+      title: "Taxes",
+      fields: [
+        { type: "field", labelText: "Salary Tax %", key: "taxRateSalary" as const, inputType: "number", options: { min: 0, max: 100, step: 1, help: "Effective rate" } },
+        { type: "field", labelText: "Bonus Tax %", key: "taxRateBonus" as const, inputType: "number", options: { min: 0, max: 100, step: 1, help: "Effective rate" } },
+        { type: "field", labelText: "Sign-on Tax %", key: "taxRateSignOn" as const, inputType: "number", options: { min: 0, max: 100, step: 1, help: "Effective rate" } },
+        { type: "field", labelText: "Equity Tax %", key: "taxRateEquity" as const, inputType: "number", options: { min: 0, max: 100, step: 1, help: "Effective rate" } },
+        { type: "select", labelText: "Equity Tax Type", key: "equityTaxTreatment" as const, options: [["ordinary", "Ordinary Income"], ["capitalGains", "Capital Gains"]] as Array<[string, string]> },
+      ],
+    },
+    {
+      title: "Risk Analysis",
+      fields: [
+        { type: "toggle", labelText: "Enable Monte Carlo", key: "monteCarloEnabled" as const },
+        ...(s.monteCarloEnabled ? [
+          { type: "field" as const, labelText: "Volatility %", key: "equityVolatility" as const, inputType: "number", options: { min: 0, max: 200, step: 1, help: "Annual std dev" } },
+          { type: "field" as const, labelText: "Simulations", key: "monteCarloRuns" as const, inputType: "number", options: { min: 100, max: 1000000, step: 100 } },
+          { type: "select" as const, labelText: "Confidence", key: "monteCarloConfidence" as const, options: [[80, "80%"], [90, "90%"], [95, "95%"], [99, "99%"]] as Array<[number, string]> },
+        ] : []),
+      ],
+    },
   ];
 
   return (
@@ -710,6 +1047,9 @@ export function App() {
                       if (f.type === "segmented") {
                         return <SegmentedField key={i} state={s} fieldKey={f.key} values={f.values} onChange={updateField} />;
                       }
+                      if (f.type === "toggle") {
+                        return <ToggleField key={i} state={s} labelText={f.labelText} fieldKey={f.key} onChange={updateField} />;
+                      }
                       return null;
                     })}
                   </div>
@@ -724,6 +1064,7 @@ export function App() {
               <button className={`tab-button${activeTab === "cashflow" ? " is-active" : ""}`} data-tab="cashflow" aria-current={activeTab === "cashflow" ? "page" : undefined} onClick={() => setActiveTab("cashflow")}>Cashflow</button>
               <button className={`tab-button${activeTab === "equity" ? " is-active" : ""}`} data-tab="equity" aria-current={activeTab === "equity" ? "page" : undefined} onClick={() => setActiveTab("equity")}>Equity</button>
               <button className={`tab-button${activeTab === "scenarios" ? " is-active" : ""}`} data-tab="scenarios" aria-current={activeTab === "scenarios" ? "page" : undefined} onClick={() => setActiveTab("scenarios")}>Scenarios</button>
+              <button className={`tab-button${activeTab === "risk" ? " is-active" : ""}`} data-tab="risk" aria-current={activeTab === "risk" ? "page" : undefined} onClick={() => setActiveTab("risk")}>Risk Analysis</button>
             </nav>
 
             {/* Overview tab */}
@@ -846,12 +1187,12 @@ export function App() {
                       <button type="button" data-detail-cashflow-view="annual" className={s.detailCashflowView === "annual" ? "is-active" : ""} onClick={() => handleViewToggle("annual", "detail")}>Annual</button>
                     </div>
                     <button type="button" className={`toggle-chip${s.detailCashflowCumulative ? " is-active" : ""}`} data-detail-cumulative onClick={() => handleCumulativeToggle("detail")}>Cumulative</button>
-                    <div id="cashflowTotal" className="metric-badge">Total: {money(s, renderModel.totals.total)}</div>
+                    <div id="cashflowTotal" className="metric-badge">Gross: {money(s, renderModel.totals.total)} · Net: {money(s, renderModel.totals.totalNet)}</div>
                   </div>
                 </div>
                 <div className="table-wrap tall">
                   <table>
-                    <thead><tr><th>{s.detailCashflowView === "annual" ? "Year" : "Month"}</th><th>Salary</th><th>Bonus</th><th>Sign-on</th><th>Equity Value</th><th>Total</th></tr></thead>
+                    <thead><tr><th>{s.detailCashflowView === "annual" ? "Year" : "Month"}</th><th>Salary</th><th>Bonus</th><th>Sign-on</th><th>Equity Value</th><th>Gross Total</th><th>Net Take-Home</th></tr></thead>
                     <tbody id="cashflowRows">
                       {(cashRows as any[]).map((row, i) => (
                         <tr key={i}>
@@ -860,7 +1201,8 @@ export function App() {
                           <td data-label="Bonus">{money(s, row.bonus)}</td>
                           <td data-label="Sign-on">{money(s, row.signOn)}</td>
                           <td data-label="Equity">{money(s, row.equityValue)}</td>
-                          <td data-label="Total">{money(s, row.total)}</td>
+                          <td data-label="Gross Total">{money(s, row.total)}</td>
+                          <td data-label="Net Take-Home">{money(s, row.totalNet ?? row.total)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -871,7 +1213,8 @@ export function App() {
                         <td data-label="Bonus">{money(s, cashSubtotals.bonus)}</td>
                         <td data-label="Sign-on">{money(s, cashSubtotals.signOn)}</td>
                         <td data-label="Equity">{money(s, cashSubtotals.equity)}</td>
-                        <td data-label="Total">{money(s, cashSubtotals.total)}</td>
+                        <td data-label="Gross Total">{money(s, cashSubtotals.total)}</td>
+                        <td data-label="Net Take-Home">{money(s, cashSubtotals.totalNet)}</td>
                       </tr>
                     </tfoot>
                   </table>
@@ -1017,8 +1360,15 @@ export function App() {
                   <li>Event-based custom schedules such as 30:23,36:22,42:18,48:17 vest exact units at completed months.</li>
                   <li>Cash and equity can use different source currencies; dashboard totals use the selected reporting currency.</li>
                   <li>Equity valuation grows monthly from the selected annual growth assumption.</li>
+                  <li>Tax rates are applied as effective rates to each compensation component independently.</li>
+                  <li>Monte Carlo simulation uses Geometric Brownian Motion to model equity price volatility.</li>
                 </ul>
               </article>
+            </section>
+
+            {/* Risk Analysis tab */}
+            <section id="risk" className={`tab-panel${activeTab === "risk" ? " is-active" : ""}`}>
+              <RiskAnalysisPanel state={s} defaults={DEFAULTS} />
             </section>
           </section>
         </div>

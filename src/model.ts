@@ -6,7 +6,7 @@ import {
   parseStartDate,
   vestingDateLabel,
 } from "./format";
-import type { ProjectionState } from "./state";
+import type { ProjectionState, EquityTaxTreatment } from "./state";
 
 export const scenarioGrowthRates: number[] = [-15, -10, 0, 5, 10, 15, 25];
 
@@ -38,6 +38,13 @@ export interface ProjectionRow {
   equityValue: number;
   cumulativeEquityValue: number;
   total: number;
+  // Net take-home values (after tax)
+  salaryNet: number;
+  bonusNet: number;
+  signOnNet: number;
+  equityNet: number;
+  cashTotalNet: number;
+  totalNet: number;
 }
 
 export interface ProjectionTotals {
@@ -47,6 +54,13 @@ export interface ProjectionTotals {
   equity: number;
   total: number;
   cash: number;
+  // Net totals (after tax)
+  salaryNet: number;
+  bonusNet: number;
+  signOnNet: number;
+  equityNet: number;
+  cashNet: number;
+  totalNet: number;
 }
 
 export interface ProjectionModel {
@@ -67,6 +81,12 @@ export interface AnnualCashflowRow {
   equityValue: number;
   cashTotal: number;
   total: number;
+  salaryNet: number;
+  bonusNet: number;
+  signOnNet: number;
+  equityNet: number;
+  cashTotalNet: number;
+  totalNet: number;
 }
 
 export interface CashflowDisplayRow extends ProjectionRow {
@@ -98,9 +118,27 @@ export interface ScenarioVariant {
   annualRows: AnnualCashflowRow[];
 }
 
+export interface MonteCarloResult {
+  percentileLow: number;
+  percentileHigh: number;
+  median: number;
+  mean: number;
+  distribution: number[];
+  runs: number;
+}
+
 export interface PolarPoint {
   x: number;
   y: number;
+}
+
+/**
+ * Apply tax to a gross value, returning the net (after-tax) amount.
+ * @param value Gross value
+ * @param ratePercent Tax rate as a percentage (e.g., 22 for 22%)
+ */
+export function applyTax(value: number, ratePercent: number): number {
+  return value * (1 - Math.max(0, Math.min(100, ratePercent)) / 100);
 }
 
 export function annualSalaryForYear(state: ProjectionState, yearIndex: number): number {
@@ -237,6 +275,14 @@ export function projectionFor(
     const equityValue = convertCurrency(state, equityValueNative, state.equityCurrency);
     cumulativeEquityValue += equityValue;
 
+    // Calculate net values (after tax)
+    const salaryNet = applyTax(salaryReported, state.taxRateSalary);
+    const bonusNet = applyTax(bonusReported, state.taxRateBonus);
+    const signOnNet = applyTax(signOnReported, state.taxRateSignOn);
+    const equityNet = applyTax(equityValue, state.taxRateEquity);
+    const cashTotalNet = salaryNet + bonusNet + signOnNet;
+    const totalNet = cashTotalNet + equityNet;
+
     return {
       index,
       vestingMonthNumber,
@@ -252,6 +298,12 @@ export function projectionFor(
       equityValue,
       cumulativeEquityValue,
       total: salaryReported + bonusReported + signOnReported + equityValue,
+      salaryNet,
+      bonusNet,
+      signOnNet,
+      equityNet,
+      cashTotalNet,
+      totalNet,
     };
   });
 
@@ -263,9 +315,15 @@ export function projectionFor(
       acc.equity += row.equityValue;
       acc.total += row.total;
       acc.cash += row.cashTotal;
+      acc.salaryNet += row.salaryNet;
+      acc.bonusNet += row.bonusNet;
+      acc.signOnNet += row.signOnNet;
+      acc.equityNet += row.equityNet;
+      acc.cashNet += row.cashTotalNet;
+      acc.totalNet += row.totalNet;
       return acc;
     },
-    { salary: 0, bonus: 0, signOn: 0, equity: 0, total: 0, cash: 0 },
+    { salary: 0, bonus: 0, signOn: 0, equity: 0, total: 0, cash: 0, salaryNet: 0, bonusNet: 0, signOnNet: 0, equityNet: 0, cashNet: 0, totalNet: 0 },
   );
 
   return {
@@ -290,9 +348,15 @@ export function annualCashflowRows(rows: ProjectionRow[]): AnnualCashflowRow[] {
         acc.equityValue += row.equityValue;
         acc.cashTotal += row.cashTotal;
         acc.total += row.total;
+        acc.salaryNet += row.salaryNet;
+        acc.bonusNet += row.bonusNet;
+        acc.signOnNet += row.signOnNet;
+        acc.equityNet += row.equityNet;
+        acc.cashTotalNet += row.cashTotalNet;
+        acc.totalNet += row.totalNet;
         return acc;
       },
-      { salary: 0, bonus: 0, signOn: 0, equityValue: 0, cashTotal: 0, total: 0 },
+      { salary: 0, bonus: 0, signOn: 0, equityValue: 0, cashTotal: 0, total: 0, salaryNet: 0, bonusNet: 0, signOnNet: 0, equityNet: 0, cashTotalNet: 0, totalNet: 0 },
     );
 
     return {
@@ -319,10 +383,10 @@ export function cashflowDisplayRows(
   }));
 }
 
-export function cumulativeCashflowRows<T extends { salary: number; bonus: number; signOn: number; equityValue: number; cashTotal: number; total: number }>(
+export function cumulativeCashflowRows<T extends { salary: number; bonus: number; signOn: number; equityValue: number; cashTotal: number; total: number; salaryNet?: number; bonusNet?: number; signOnNet?: number; equityNet?: number; cashTotalNet?: number; totalNet?: number }>(
   rows: T[],
 ): T[] {
-  const running = { salary: 0, bonus: 0, signOn: 0, equityValue: 0, cashTotal: 0, total: 0 };
+  const running = { salary: 0, bonus: 0, signOn: 0, equityValue: 0, cashTotal: 0, total: 0, salaryNet: 0, bonusNet: 0, signOnNet: 0, equityNet: 0, cashTotalNet: 0, totalNet: 0 };
   return rows.map((row) => {
     running.salary += row.salary;
     running.bonus += row.bonus;
@@ -330,6 +394,12 @@ export function cumulativeCashflowRows<T extends { salary: number; bonus: number
     running.equityValue += row.equityValue;
     running.cashTotal += row.cashTotal;
     running.total += row.total;
+    running.salaryNet += row.salaryNet ?? row.salary;
+    running.bonusNet += row.bonusNet ?? row.bonus;
+    running.signOnNet += row.signOnNet ?? row.signOn;
+    running.equityNet += row.equityNet ?? row.equityValue;
+    running.cashTotalNet += row.cashTotalNet ?? row.cashTotal;
+    running.totalNet += row.totalNet ?? row.total;
     return {
       ...row,
       salary: running.salary,
@@ -338,6 +408,12 @@ export function cumulativeCashflowRows<T extends { salary: number; bonus: number
       equityValue: running.equityValue,
       cashTotal: running.cashTotal,
       total: running.total,
+      salaryNet: running.salaryNet,
+      bonusNet: running.bonusNet,
+      signOnNet: running.signOnNet,
+      equityNet: running.equityNet,
+      cashTotalNet: running.cashTotalNet,
+      totalNet: running.totalNet,
     };
   });
 }
@@ -478,9 +554,16 @@ export function totalsForRows(rows: ProjectionRow[]): ProjectionTotals {
       acc.signOn += row.signOn;
       acc.equity += row.equityValue;
       acc.total += row.total;
+      acc.cash += row.cashTotal ?? row.salary + row.bonus + row.signOn;
+      acc.salaryNet += row.salaryNet ?? row.salary;
+      acc.bonusNet += row.bonusNet ?? row.bonus;
+      acc.signOnNet += row.signOnNet ?? row.signOn;
+      acc.equityNet += row.equityNet ?? row.equityValue;
+      acc.cashNet += row.cashTotalNet ?? row.cashTotal ?? row.salary + row.bonus + row.signOn;
+      acc.totalNet += row.totalNet ?? row.total;
       return acc;
     },
-    { salary: 0, bonus: 0, signOn: 0, equity: 0, total: 0, cash: 0 },
+    { salary: 0, bonus: 0, signOn: 0, equity: 0, total: 0, cash: 0, salaryNet: 0, bonusNet: 0, signOnNet: 0, equityNet: 0, cashNet: 0, totalNet: 0 },
   );
 }
 
@@ -540,4 +623,140 @@ export function scenarioVariants(state: ProjectionState, defaults: ProjectionSta
 
 export function projectionPeriodLabel(state: ProjectionState, defaults: ProjectionState): string {
   return `${parseStartDate(state, defaults).toISOString()} ${addMonths(parseStartDate(state, defaults), state.years * 12).toISOString()}`;
+}
+
+/**
+ * Box-Muller transform to generate a standard normal random variable.
+ */
+function boxMullerRandom(): number {
+  let u = 0, v = 0;
+  while (u === 0) u = Math.random();
+  while (v === 0) v = Math.random();
+  return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+}
+
+/**
+ * Run Monte Carlo simulation for equity value using Geometric Brownian Motion.
+ * Returns distribution of total equity values across all simulation runs.
+ */
+export function runMonteCarlo(
+  state: ProjectionState,
+  defaults: ProjectionState,
+): MonteCarloResult {
+  const runs = Math.min(1000000, Math.max(100, Math.round(state.monteCarloRuns || 1000)));
+  const confidence = Math.max(50, Math.min(99, state.monteCarloConfidence || 90));
+  // Respect explicit zero volatility from the user (don't treat 0 as "missing").
+  const volatility = Math.max(0, (state.equityVolatility ?? 30)) / 100;
+  const drift = (state.annualEquityGrowth || 0) / 100;
+  const months = Math.max(1, Math.round(state.years * 12));
+  
+  // Calculate total shares and vesting schedule
+  const eventShares = customVestingEvents(state).reduce((sum, event) => sum + event.shares, 0);
+  const totalShares =
+    state.vestingCadence === "custom" && state.customVestingMode === "events"
+      ? eventShares
+      : state.rsuGrantValue / Math.max(1, state.startingSharePrice);
+  
+  // Pre-compute vesting schedule (month -> shares)
+  const vestingSchedule: Array<{ month: number; shares: number }> = [];
+  const immediateShares = customVestingEvents(state)
+    .filter((event) => event.month === 0)
+    .reduce((sum, event) => sum + event.shares, 0);
+  if (immediateShares > 0) vestingSchedule.push({ month: 0, shares: immediateShares });
+  for (let i = 0; i < months; i++) {
+    const shares = vestingSharesForMonth(state, i, totalShares);
+    if (shares > 0) {
+      vestingSchedule.push({ month: i + 1, shares });
+    }
+  }
+  
+  // Monthly drift and volatility for GBM
+  const monthlyDrift = drift / 12;
+  const monthlyVol = volatility / Math.sqrt(12);
+  
+  const results: number[] = [];
+  
+  for (let run = 0; run < runs; run++) {
+      let sharePrice = state.startingSharePrice;
+      // Convert immediate vested shares into report currency so distribution accounts for equity/report currency differences
+      let totalEquityValue = convertCurrency(state, immediateShares * sharePrice, state.equityCurrency);
+    
+    for (let month = 1; month <= months; month++) {
+      // Geometric Brownian Motion: S(t+1) = S(t) * exp((mu - sigma^2/2)*dt + sigma*sqrt(dt)*Z)
+      const z = boxMullerRandom();
+      const logReturn = (monthlyDrift - 0.5 * monthlyVol * monthlyVol) + monthlyVol * z;
+      sharePrice = sharePrice * Math.exp(logReturn);
+      
+      // Check if any shares vest this month
+      const vestingEvent = vestingSchedule.find(v => v.month === month);
+      if (vestingEvent) {
+        const equityValueNative = vestingEvent.shares * sharePrice;
+        const equityValue = convertCurrency(state, equityValueNative, state.equityCurrency);
+        totalEquityValue += equityValue;
+      }
+    }
+    
+    results.push(totalEquityValue);
+  }
+  
+  // Sort results for percentile calculation
+  results.sort((a, b) => a - b);
+  
+  // Calculate percentiles
+  const lowPercentile = (100 - confidence) / 2 / 100;
+  const highPercentile = 1 - lowPercentile;
+  const medianPercentile = 0.5;
+  
+  const percentileLow = results[Math.floor(runs * lowPercentile)] || results[0];
+  const percentileHigh = results[Math.floor(runs * highPercentile)] || results[runs - 1];
+  const median = results[Math.floor(runs * medianPercentile)] || results[Math.floor(runs / 2)];
+  const mean = results.reduce((sum, v) => sum + v, 0) / runs;
+  
+  return {
+    percentileLow,
+    percentileHigh,
+    median,
+    mean,
+    distribution: results,
+    runs,
+  };
+}
+
+/**
+ * Generate histogram bins from Monte Carlo distribution for visualization.
+ */
+export function monteCarloHistogram(
+  result: MonteCarloResult,
+  bins: number = 30,
+): Array<{ start: number; end: number; count: number; percent: number }> {
+  if (result.distribution.length === 0) return [];
+  
+  const min = result.distribution[0];
+  const max = result.distribution[result.distribution.length - 1];
+  const range = max - min;
+  
+  if (range === 0) {
+    return [{ start: min, end: max, count: result.distribution.length, percent: 100 }];
+  }
+  
+  const binWidth = range / bins;
+  const histogram: Array<{ start: number; end: number; count: number; percent: number }> = [];
+  
+  for (let i = 0; i < bins; i++) {
+    const start = min + i * binWidth;
+    const end = start + binWidth;
+    histogram.push({ start, end, count: 0, percent: 0 });
+  }
+  
+  for (const value of result.distribution) {
+    const binIndex = Math.min(bins - 1, Math.floor((value - min) / binWidth));
+    histogram[binIndex].count++;
+  }
+  
+  const total = result.distribution.length;
+  for (const bin of histogram) {
+    bin.percent = (bin.count / total) * 100;
+  }
+  
+  return histogram;
 }

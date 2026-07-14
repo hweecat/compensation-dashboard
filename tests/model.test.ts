@@ -16,6 +16,9 @@ import {
   mixPeriodOptions,
   cashflowComponentMeta,
   visibleCashflowComponents,
+  applyTax,
+  runMonteCarlo,
+  monteCarloHistogram,
 } from "../src/model";
 
 const baseState: ProjectionState = { ...DEFAULTS, cashflowComponents: { ...DEFAULTS.cashflowComponents } };
@@ -293,5 +296,268 @@ describe("cashflowComponentMeta and visibleCashflowComponents", () => {
     const keys = visible.map((c) => c.key);
     expect(keys).toContain("salary");
     expect(keys).not.toContain("bonus");
+  });
+});
+
+describe("applyTax", () => {
+  it("returns full value when tax rate is 0", () => {
+    expect(applyTax(1000, 0)).toBe(1000);
+  });
+
+  it("applies tax rate correctly", () => {
+    expect(applyTax(1000, 25)).toBe(750);
+    expect(applyTax(1000, 50)).toBe(500);
+    expect(applyTax(1000, 100)).toBe(0);
+  });
+
+  it("clamps tax rate between 0 and 100", () => {
+    expect(applyTax(1000, -10)).toBe(1000); // negative rate treated as 0
+    expect(applyTax(1000, 150)).toBe(0); // rate > 100 treated as 100
+  });
+
+  it("handles decimal tax rates", () => {
+    expect(applyTax(1000, 22.5)).toBeCloseTo(775, 2);
+  });
+});
+
+describe("tax calculations in projectionFor", () => {
+  it("calculates net salary with tax rate", () => {
+    const state = {
+      ...baseState,
+      baseSalary: 120000,
+      salaryBasis: "annual" as const,
+      taxRateSalary: 25,
+    };
+    const model = projectionFor(state, DEFAULTS);
+    const grossSalary = model.rows[0].salary;
+    const netSalary = model.rows[0].salaryNet;
+    expect(netSalary).toBeCloseTo(grossSalary * 0.75, 2);
+  });
+
+  it("calculates net bonus with tax rate", () => {
+    const state = {
+      ...baseState,
+      baseSalary: 120000,
+      bonusPercent: 10,
+      bonusMonth: 3,
+      salaryBasis: "annual" as const,
+      taxRateBonus: 30,
+    };
+    const model = projectionFor(state, DEFAULTS);
+    const bonusRow = model.rows.find((r) => r.bonus > 0);
+    expect(bonusRow).toBeDefined();
+    expect(bonusRow!.bonusNet).toBeCloseTo(bonusRow!.bonus * 0.7, 2);
+  });
+
+  it("calculates net sign-on with tax rate", () => {
+    const state = {
+      ...baseState,
+      signOnYear1: 10000,
+      signOnYear1Mode: "lump" as const,
+      taxRateSignOn: 20,
+    };
+    const model = projectionFor(state, DEFAULTS);
+    expect(model.rows[0].signOnNet).toBeCloseTo(10000 * 0.8, 2);
+  });
+
+  it("calculates net equity with tax rate", () => {
+    const state = {
+      ...baseState,
+      rsuGrantValue: 100000,
+      startingSharePrice: 100,
+      taxRateEquity: 15,
+    };
+    const model = projectionFor(state, DEFAULTS);
+    const vestRow = model.rows.find((r) => r.equityValue > 0);
+    if (vestRow) {
+      expect(vestRow.equityNet).toBeCloseTo(vestRow.equityValue * 0.85, 2);
+    }
+  });
+
+  it("totals include net values", () => {
+    const state = {
+      ...baseState,
+      taxRateSalary: 25,
+      taxRateBonus: 30,
+      taxRateSignOn: 20,
+      taxRateEquity: 15,
+    };
+    const model = projectionFor(state, DEFAULTS);
+    expect(model.totals.totalNet).toBeLessThan(model.totals.total);
+    expect(model.totals.salaryNet).toBeLessThan(model.totals.salary);
+    expect(model.totals.cashNet).toBeLessThan(model.totals.cash);
+  });
+
+  it("net equals gross when all tax rates are 0", () => {
+    const state = {
+      ...baseState,
+      taxRateSalary: 0,
+      taxRateBonus: 0,
+      taxRateSignOn: 0,
+      taxRateEquity: 0,
+    };
+    const model = projectionFor(state, DEFAULTS);
+    expect(model.totals.totalNet).toBeCloseTo(model.totals.total, 2);
+    expect(model.totals.salaryNet).toBeCloseTo(model.totals.salary, 2);
+    expect(model.totals.equityNet).toBeCloseTo(model.totals.equity, 2);
+  });
+});
+
+describe("runMonteCarlo", () => {
+  it("returns result with expected structure", () => {
+    const state = {
+      ...baseState,
+      monteCarloEnabled: true,
+      monteCarloRuns: 100,
+      equityVolatility: 30,
+      monteCarloConfidence: 90,
+    };
+    const result = runMonteCarlo(state, DEFAULTS);
+    expect(result).toHaveProperty("percentileLow");
+    expect(result).toHaveProperty("percentileHigh");
+    expect(result).toHaveProperty("median");
+    expect(result).toHaveProperty("mean");
+    expect(result).toHaveProperty("distribution");
+    expect(result).toHaveProperty("runs");
+    expect(result.runs).toBe(100);
+    expect(result.distribution).toHaveLength(100);
+  });
+
+  it("distribution is sorted in ascending order", () => {
+    const state = {
+      ...baseState,
+      monteCarloEnabled: true,
+      monteCarloRuns: 200,
+      equityVolatility: 25,
+    };
+    const result = runMonteCarlo(state, DEFAULTS);
+    for (let i = 1; i < result.distribution.length; i++) {
+      expect(result.distribution[i]).toBeGreaterThanOrEqual(result.distribution[i - 1]);
+    }
+  });
+
+  it("percentileLow is less than percentileHigh", () => {
+    const state = {
+      ...baseState,
+      monteCarloEnabled: true,
+      monteCarloRuns: 500,
+      equityVolatility: 40,
+      monteCarloConfidence: 90,
+    };
+    const result = runMonteCarlo(state, DEFAULTS);
+    expect(result.percentileLow).toBeLessThan(result.percentileHigh);
+  });
+
+  it("median is between percentileLow and percentileHigh", () => {
+    const state = {
+      ...baseState,
+      monteCarloEnabled: true,
+      monteCarloRuns: 500,
+      equityVolatility: 30,
+      monteCarloConfidence: 90,
+    };
+    const result = runMonteCarlo(state, DEFAULTS);
+    expect(result.median).toBeGreaterThanOrEqual(result.percentileLow);
+    expect(result.median).toBeLessThanOrEqual(result.percentileHigh);
+  });
+
+  it("higher volatility produces wider distribution", () => {
+    const lowVolState = {
+      ...baseState,
+      monteCarloEnabled: true,
+      monteCarloRuns: 500,
+      equityVolatility: 10,
+      monteCarloConfidence: 90,
+    };
+    const highVolState = {
+      ...baseState,
+      monteCarloEnabled: true,
+      monteCarloRuns: 500,
+      equityVolatility: 60,
+      monteCarloConfidence: 90,
+    };
+    const lowVolResult = runMonteCarlo(lowVolState, DEFAULTS);
+    const highVolResult = runMonteCarlo(highVolState, DEFAULTS);
+    const lowVolRange = lowVolResult.percentileHigh - lowVolResult.percentileLow;
+    const highVolRange = highVolResult.percentileHigh - highVolResult.percentileLow;
+    expect(highVolRange).toBeGreaterThan(lowVolRange);
+  });
+
+  it("respects minimum runs of 100", () => {
+    const state = {
+      ...baseState,
+      monteCarloEnabled: true,
+      monteCarloRuns: 10, // below minimum
+      equityVolatility: 30,
+    };
+    const result = runMonteCarlo(state, DEFAULTS);
+    expect(result.runs).toBe(100);
+    expect(result.distribution).toHaveLength(100);
+  });
+});
+
+describe("monteCarloHistogram", () => {
+  it("returns empty array for empty distribution", () => {
+    const result = {
+      percentileLow: 0,
+      percentileHigh: 0,
+      median: 0,
+      mean: 0,
+      distribution: [],
+      runs: 0,
+    };
+    expect(monteCarloHistogram(result)).toEqual([]);
+  });
+
+  it("returns correct number of bins", () => {
+    const state = {
+      ...baseState,
+      monteCarloEnabled: true,
+      monteCarloRuns: 200,
+      equityVolatility: 30,
+    };
+    const mcResult = runMonteCarlo(state, DEFAULTS);
+    const histogram = monteCarloHistogram(mcResult, 20);
+    expect(histogram).toHaveLength(20);
+  });
+
+  it("bin counts sum to total runs", () => {
+    const state = {
+      ...baseState,
+      monteCarloEnabled: true,
+      monteCarloRuns: 300,
+      equityVolatility: 25,
+    };
+    const mcResult = runMonteCarlo(state, DEFAULTS);
+    const histogram = monteCarloHistogram(mcResult, 15);
+    const totalCount = histogram.reduce((sum, bin) => sum + bin.count, 0);
+    expect(totalCount).toBe(300);
+  });
+
+  it("bin percentages sum to approximately 100", () => {
+    const state = {
+      ...baseState,
+      monteCarloEnabled: true,
+      monteCarloRuns: 500,
+      equityVolatility: 30,
+    };
+    const mcResult = runMonteCarlo(state, DEFAULTS);
+    const histogram = monteCarloHistogram(mcResult, 25);
+    const totalPercent = histogram.reduce((sum, bin) => sum + bin.percent, 0);
+    expect(totalPercent).toBeCloseTo(100, 0);
+  });
+
+  it("each bin has start less than end", () => {
+    const state = {
+      ...baseState,
+      monteCarloEnabled: true,
+      monteCarloRuns: 200,
+      equityVolatility: 30,
+    };
+    const mcResult = runMonteCarlo(state, DEFAULTS);
+    const histogram = monteCarloHistogram(mcResult, 10);
+    for (const bin of histogram) {
+      expect(bin.start).toBeLessThan(bin.end);
+    }
   });
 });

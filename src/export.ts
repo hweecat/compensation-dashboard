@@ -32,6 +32,7 @@ export function exportFile(content: string, fileName: string, type: string): voi
 
 export function exportCsv(state: ProjectionState, defaults: ProjectionState): void {
   const model = projectionFor(state, defaults);
+  const hasTaxes = state.taxRateSalary > 0 || state.taxRateBonus > 0 || state.taxRateSignOn > 0 || state.taxRateEquity > 0;
   const header = [
     "Month",
     `Salary (${state.reportCurrency})`,
@@ -41,6 +42,13 @@ export function exportCsv(state: ProjectionState, defaults: ProjectionState): vo
     `Projected Share Price (${state.equityCurrency})`,
     `Equity Value (${state.reportCurrency})`,
     `Total (${state.reportCurrency})`,
+    ...(hasTaxes ? [
+      `Salary Net (${state.reportCurrency})`,
+      `Bonus Net (${state.reportCurrency})`,
+      `Sign-on Net (${state.reportCurrency})`,
+      `Equity Net (${state.reportCurrency})`,
+      `Total Net (${state.reportCurrency})`,
+    ] : []),
   ];
   const rows = model.rows.map((row) => [
     row.month,
@@ -51,6 +59,13 @@ export function exportCsv(state: ProjectionState, defaults: ProjectionState): vo
     row.projectedSharePrice.toFixed(2),
     row.equityValue.toFixed(2),
     row.total.toFixed(2),
+    ...(hasTaxes ? [
+      row.salaryNet.toFixed(2),
+      row.bonusNet.toFixed(2),
+      row.signOnNet.toFixed(2),
+      row.equityNet.toFixed(2),
+      row.totalNet.toFixed(2),
+    ] : []),
   ]);
   const csv = [header, ...rows].map((line) => line.join(",")).join("\n");
   exportFile(csv, safeFileName(state.scenarioName, ".csv"), "text/csv;charset=utf-8");
@@ -71,6 +86,7 @@ export function exportHtmlReport(state: ProjectionState, defaults: ProjectionSta
   const horizonLabel = `${yearCount} year horizon`;
   const includeScenarios = Number(state.rsuGrantValue || 0) > 0;
   const variants = scenarioVariants(state, defaults);
+  const hasTaxes = state.taxRateSalary > 0 || state.taxRateBonus > 0 || state.taxRateSignOn > 0 || state.taxRateEquity > 0;
   const assumptions: Array<[string, string]> = [
     ["Projection period", `${exactDateLabel(parseStartDate(state, defaults))} to ${exactDateLabel(addMonths(parseStartDate(state, defaults), state.years * 12))}`],
     ["Base salary", `${money(state, state.baseSalary, state.cashCurrency)} ${state.salaryBasis}`],
@@ -80,6 +96,12 @@ export function exportHtmlReport(state: ProjectionState, defaults: ProjectionSta
     ["Equity growth", `${numberFormatter.format(state.annualEquityGrowth)}% annually`],
     ["Currencies", `Cash ${state.cashCurrency}, equity ${state.equityCurrency}, report ${state.reportCurrency}, USD/SGD ${currencyRateFormatter.format(state.usdToSgd)}`],
     ["Vesting", state.vestingCadence === "custom" ? `${state.customVestingMode}: ${state.customVestingPattern}` : `${state.vestingCadence}, ${state.vestingYears} years`],
+    ...(hasTaxes ? [
+      ["Tax rates", `Salary ${state.taxRateSalary}%, Bonus ${state.taxRateBonus}%, Sign-on ${state.taxRateSignOn}%, Equity ${state.taxRateEquity}% (${state.equityTaxTreatment})`],
+    ] : []),
+    ...(state.monteCarloEnabled ? [
+      ["Monte Carlo", `${state.monteCarloRuns} runs, ${state.equityVolatility}% volatility, ${state.monteCarloConfidence}% confidence`],
+    ] : []),
   ];
 
   const html = `<!doctype html>
@@ -119,6 +141,14 @@ export function exportHtmlReport(state: ProjectionState, defaults: ProjectionSta
         <div class="card"><span>Equity value</span><strong>${escapeHtml(money(state, model.totals.equity))}</strong></div>
         <div class="card"><span>Peak month</span><strong>${escapeHtml(model.peakMonth.month)}</strong></div>
       </div>
+      ${hasTaxes ? `
+      <h2>Net Take-Home Summary</h2>
+      <div class="summary">
+        <div class="card"><span>Gross total</span><strong>${escapeHtml(money(state, model.totals.total))}</strong></div>
+        <div class="card"><span>Net take-home</span><strong>${escapeHtml(money(state, model.totals.totalNet))}</strong></div>
+        <div class="card"><span>Total tax</span><strong>${escapeHtml(money(state, model.totals.total - model.totals.totalNet))}</strong></div>
+        <div class="card"><span>Effective tax rate</span><strong>${model.totals.total > 0 ? ((model.totals.total - model.totals.totalNet) / model.totals.total * 100).toFixed(1) : "0.0"}%</strong></div>
+      </div>` : ""}
     </section>
     <section>
       <h2>Key Assumptions</h2>
