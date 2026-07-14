@@ -645,7 +645,8 @@ export function runMonteCarlo(
 ): MonteCarloResult {
   const runs = Math.min(1000000, Math.max(100, Math.round(state.monteCarloRuns || 1000)));
   const confidence = Math.max(50, Math.min(99, state.monteCarloConfidence || 90));
-  const volatility = Math.max(0, state.equityVolatility || 30) / 100;
+  // Respect explicit zero volatility from the user (don't treat 0 as "missing").
+  const volatility = Math.max(0, (state.equityVolatility ?? 30)) / 100;
   const drift = (state.annualEquityGrowth || 0) / 100;
   const months = Math.max(1, Math.round(state.years * 12));
   
@@ -676,8 +677,9 @@ export function runMonteCarlo(
   const results: number[] = [];
   
   for (let run = 0; run < runs; run++) {
-    let sharePrice = state.startingSharePrice;
-    let totalEquityValue = immediateShares * sharePrice;
+      let sharePrice = state.startingSharePrice;
+      // Convert immediate vested shares into report currency so distribution accounts for equity/report currency differences
+      let totalEquityValue = convertCurrency(state, immediateShares * sharePrice, state.equityCurrency);
     
     for (let month = 1; month <= months; month++) {
       // Geometric Brownian Motion: S(t+1) = S(t) * exp((mu - sigma^2/2)*dt + sigma*sqrt(dt)*Z)
