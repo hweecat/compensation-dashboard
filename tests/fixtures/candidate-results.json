@@ -1,0 +1,37 @@
+{
+  "contractVersion": "wave-1.3",
+  "candidate": "fresh",
+  "fixtureSha256": "dd79937786ce80198949c7f5fb8637797ffc4da311648d02168878e9fdd33e0e",
+  "ledgerSha256": "60ee6b39d46c52cfd60d013032aa192a9554d848965227c08be1712cbb21763d",
+  "eventCount": 33,
+  "includedEventCount": 29,
+  "excludedEventCount": 4,
+  "componentTotals": {
+    "salary": {
+      "grossMinor": "2030002",
+      "taxMinor": "365402",
+      "netMinor": "1664600"
+    },
+    "bonus": {
+      "grossMinor": "17043637",
+      "taxMinor": "3408727",
+      "netMinor": "13634910"
+    },
+    "signOn": {
+      "grossMinor": "120001",
+      "taxMinor": "18000",
+      "netMinor": "102001"
+    },
+    "equity": {
+      "grossMinor": "2945691",
+      "taxMinor": "648052",
+      "netMinor": "2297639"
+    }
+  },
+  "grossMinor": "22139331",
+  "taxMinor": "4440181",
+  "netMinor": "17699150",
+  "engineVersion": "correctness-ledger-v2",
+  "generatedBy": "npm run evidence:generate",
+  "generatedAt": "2026-07-14T08:08:48.294Z"
+}
