@@ -1,7 +1,7 @@
 # Worthflow Compensation Planner Product Design Contract
 
-**Status:** Approved for parallel implementation on 2026-07-11  
-**Base commit:** `60d08c23b67caee3975c29c0edb33cbffcf60539`  
+**Status:** Approved for parallel implementation on 2026-07-11
+**Base commit:** `60d08c23b67caee3975c29c0edb33cbffcf60539`
 **Full PRD:** `C:\Users\ongch\Documents\Codex\2026-07-10\sites-plugin-sites-openai-bundled-create-8\outputs\compensation-planner-prd.md`
 
 ## Product outcome

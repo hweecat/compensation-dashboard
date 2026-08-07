@@ -131,7 +131,7 @@ Add exact dependency families while preserving React 18 and Vite 7:
 }
 ```
 
-Run: `npm install --ignore-scripts`  
+Run: `npm install --ignore-scripts`
 Expected: lockfile updates and install exits 0.
 
 - [ ] **Step 2: Write failing schema/date/money tests**
@@ -155,7 +155,7 @@ it("rounds tax half-even", () => {
 });
 ```
 
-Run: `npm run test:vitest -- tests/engine/schema.test.ts tests/engine/money-dates.test.ts`  
+Run: `npm run test:vitest -- tests/engine/schema.test.ts tests/engine/money-dates.test.ts`
 Expected: FAIL because the new modules do not exist.
 
 - [ ] **Step 3: Implement strict schemas and primitives**
@@ -183,7 +183,7 @@ Fixtures contain no private values. Include one SGD-salary/USD-equity case with 
 
 - [ ] **Step 5: Run tests and commit**
 
-Run: `npm run test:vitest -- tests/engine/schema.test.ts tests/engine/money-dates.test.ts`  
+Run: `npm run test:vitest -- tests/engine/schema.test.ts tests/engine/money-dates.test.ts`
 Expected: PASS.
 
 Commit: `git add package.json package-lock.json src/domain src/engine/money.ts src/engine/dates.ts tests/fixtures tests/engine && git commit -m "feat: freeze compensation domain contract"`
@@ -230,7 +230,7 @@ fc.assert(fc.property(fc.bigInt({ min: 1n, max: 10_000_000n }), fc.integer({ min
     .reduce((sum, event) => sum + event.amountMinor, 0n) === total));
 ```
 
-Run: `npm run test:vitest -- tests/engine/cash-schedules.test.ts tests/engine/cash-properties.test.ts`  
+Run: `npm run test:vitest -- tests/engine/cash-schedules.test.ts tests/engine/cash-properties.test.ts`
 Expected: FAIL.
 
 - [ ] **Step 3: Implement schedules**
@@ -239,7 +239,7 @@ Salary emits month-end events inside the reporting interval. Bonus identifies pe
 
 - [ ] **Step 4: Verify and commit**
 
-Run: `npm run test:vitest -- tests/engine/cash-schedules.test.ts tests/engine/cash-properties.test.ts`  
+Run: `npm run test:vitest -- tests/engine/cash-schedules.test.ts tests/engine/cash-properties.test.ts`
 Expected: PASS.
 
 Commit: `git add src/engine/schedules tests/engine && git commit -m "feat: add exact cash schedules"`
@@ -297,7 +297,7 @@ export const equityPriceAt = (asset: EquityAsset, date: ISODate) =>
 
 - [ ] **Step 5: Verify and commit**
 
-Run: `npm run test:vitest -- tests/engine/vesting.test.ts tests/engine/vesting-properties.test.ts`  
+Run: `npm run test:vitest -- tests/engine/vesting.test.ts tests/engine/vesting-properties.test.ts`
 Expected: PASS.
 
 Commit: `git add src/engine tests/engine && git commit -m "feat: add flexible multi-grant vesting"`
@@ -346,7 +346,7 @@ Support `{ cadence: "monthly" | "annual", accumulation: "period" | "cumulative",
 
 - [ ] **Step 5: Verify fixtures and commit**
 
-Run: `npm run test:vitest -- tests/engine/ledger.test.ts tests/engine/aggregate-properties.test.ts`  
+Run: `npm run test:vitest -- tests/engine/ledger.test.ts tests/engine/aggregate-properties.test.ts`
 Expected: PASS and frozen fixture totals match.
 
 Commit: `git add src/engine tests && git commit -m "feat: add auditable compensation ledger"`
@@ -406,7 +406,7 @@ type RiskWorkerResponse =
 
 - [ ] **Step 5: Benchmark and commit**
 
-Run: `npm run test:vitest -- tests/engine/risk.test.ts tests/performance/risk-benchmark.test.ts`  
+Run: `npm run test:vitest -- tests/engine/risk.test.ts tests/performance/risk-benchmark.test.ts`
 Expected: deterministic tests pass; 10,000 runs × 48 months × 3 factors finish under 1,000 ms on the reference machine; cancellation is acknowledged under 100 ms.
 
 Commit: `git add src/engine/risk src/workers tests && git commit -m "feat: add local compensation risk simulation"`
@@ -458,7 +458,7 @@ JSON contains schema/engine versions and ISO dates. CSV prefixes formula-like ce
 
 - [ ] **Step 5: Verify and commit**
 
-Run: `npm run test:vitest -- tests/persistence tests/state`  
+Run: `npm run test:vitest -- tests/persistence tests/state`
 Expected: PASS.
 
 Commit: `git add src/persistence src/state tests && git commit -m "feat: add local scenario lifecycle"`
@@ -496,7 +496,7 @@ Expose Saved locally, Saving, Unsaved changes, and Save error. Model health grou
 
 - [ ] **Step 4: Verify and commit**
 
-Run: `npm run test:vitest -- tests/features/app-shell.test.tsx`  
+Run: `npm run test:vitest -- tests/features/app-shell.test.tsx`
 Expected: PASS.
 
 Commit: `git add src tests && git commit -m "feat: add semantic planner shell"`
@@ -537,7 +537,7 @@ The event table always exposes date, shares, percent, projected price, source/re
 
 - [ ] **Step 5: Verify and commit**
 
-Run: `npm run test:vitest -- tests/features/cash.test.tsx tests/features/equity.test.tsx`  
+Run: `npm run test:vitest -- tests/features/cash.test.tsx tests/features/equity.test.tsx`
 Expected: PASS.
 
 Commit: `git add src/features tests/features && git commit -m "feat: add flexible cash and equity editors"`
@@ -582,7 +582,7 @@ Overview exposes total, cash, equity, tax, take-home, FX drift impact, component
 
 - [ ] **Step 5: Verify and commit**
 
-Run: `npm run test:vitest -- tests/features`  
+Run: `npm run test:vitest -- tests/features`
 Expected: PASS.
 
 Commit: `git add src/features src/charts tests/features && git commit -m "feat: add tax fx risk and overview experiences"`
@@ -699,3 +699,60 @@ All candidates implement the complete plan and must pass all hard gates. Emphasi
 5. Score financial correctness/reproducibility 40%, maintainability 20%, UX/responsive/accessibility 20%, tests/diagnostics 10%, performance/bundle 5%, and persistence/export 5%.
 6. Select the highest-scoring candidate only if all hard gates pass. If none pass, integrate no candidate and issue a concrete repair list.
 7. The selected branch remains separate; do not merge into dirty `main` without explicit user direction.
+
+---
+
+## 2026-07-20 Correctness Candidate Contract-Closure Checkpoint
+
+This checkpoint supersedes the older partial-status notes in the correctness candidate report. The implementation remains uncommitted until independent verification.
+
+- [x] Preserve one canonical event ledger for visible monthly/annual, period/cumulative, gross/take-home, scoped totals, Tax & FX, deterministic bands, risk input, and every export.
+- [x] Complete named-scenario compare/open/duplicate/rename/delete and immutable revision list/restore/delete, with separate debounced recovery drafts.
+- [x] Complete salary, bonus performance-year/achievement, multiple sign-ons, configurable 2–60 instalments, final-residual disclosure, and custom dated payment editing.
+- [x] Complete asset/grant CRUD, shares/value input and residual, 3/4/5/exact duration, annual/quarterly/monthly/custom cadence, custom percent/share rows, and all four cliff policies.
+- [x] Keep partial custom-row drafts outside the canonical scenario until a valid blur commit; reject invalid date ordering without invalidating results.
+- [x] Show all included vest valuations/cumulative allocation, excluded contractual events, and inspectable model/equity assumptions.
+- [x] Derive required FX pairs and Monte Carlo factors from all active source currencies and equity assets; preview/generate/undo missing pairs.
+- [x] Expose scoped FX drift impact against the projection-start quote, independently resettable component-tax overrides, all volatilities, threshold, seed, and symmetric correlation controls.
+- [x] Complete keyboard-only edit/save/scenario/import/export/risk and scenario-revision journeys; verify Axe and 200% reflow plus widths 375/390/768/1024/1440.
+- [x] Re-run deterministic evidence, structural tests, TypeScript, production build, 10,000-run benchmark, complete Vitest, and complete browser matrices.
+- [ ] Independent GPT-5.6 Sol verifier recomputation and source review.
+- [ ] Orchestrator cross-candidate comparison and commit authorization.
+
+### Verifier handoff evidence
+
+| Gate | Fresh result |
+|---|---|
+| `npx tsc --noEmit` | PASS |
+| `npm run test:vitest` | PASS — 20 files, 131 tests |
+| `npm run test:structure` | PASS |
+| `npm run build` | PASS — 80 modules, 137.77 kB gzip app JS |
+| `npm run evidence:generate` | PASS — fixture `dd799377…`, ledger `60ee6b39…`, 33/29/4 events |
+| `npm run benchmark:risk` | PASS — 417.81 ms for 10,000 runs |
+| `npm run test:browser -- --workers=1 --reporter=line` | PASS — 15/15 |
+| `git diff --check` | PASS before documentation-only checkpoint edits |
+
+The verifier should rerun these commands on the uncommitted worktree, inspect `docs/parallel-build/candidate-report.md`, confirm no `projectionFor` import has re-entered a visible/export path, and report findings before any commit is created.
+
+### 2026-07-20 Round-three corrective sequence
+
+- [x] Make authoritative numeric edits draft-safe; valid values commit without
+  allowing empty/invalid text to overwrite canonical scenario state.
+- [x] Add general bounded Undo/Redo, including edits that remove list items.
+- [x] Cancel/ignore superseded recovery generations on scenario changes and
+  require explicit confirmation for irreversible named-scenario/revision deletes.
+- [x] Replace float custom-percent reconciliation with exact six-decimal
+  micro-percent allocation in validation and vest-event generation.
+- [x] Add a frozen seeded-risk tolerance fixture and accessible risk fan /
+  histogram with complete data tables.
+- [x] Refresh candidate evidence and provisional metrics only from valid runs.
+- [ ] After the temporary elevated-execution limit clears: run the full
+  functional suite twice, typecheck, structure, build, evidence, benchmark,
+  serial browser/Axe journeys, standard screenshots, and `git diff --check`.
+- [ ] Have an independent Sol verifier rerun the same matrix and issue the
+  final full-contract/final-selection decision before any commit.
+
+Current round-three evidence is deliberately provisional: sandbox-safe
+TypeScript and `git diff --check` pass; focused elevated regressions, the
+isolated benchmark (537.88 ms), and the last production build pass. The final
+elevated matrix is queued rather than represented as fresh evidence.
