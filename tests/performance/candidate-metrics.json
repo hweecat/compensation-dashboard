@@ -1,0 +1,30 @@
+{
+  "capturedAt": "2026-07-21T10:47:00+08:00",
+  "environment": {
+    "node": "v24.18.0",
+    "npm": "11.16.0",
+    "platform": "Windows",
+    "timezone": "Asia/Singapore"
+  },
+  "build": {
+    "modules": 82,
+    "mainJsBytes": 473720,
+    "mainJsGzipBytes": 141710,
+    "cssBytes": 22950,
+    "cssGzipBytes": 5280,
+    "riskWorkerBytes": 6320
+  },
+  "risk": {
+    "runs": 10000,
+    "durationMs": 670.89,
+    "limitMs": 1000,
+    "status": "pass"
+  },
+  "verification": {
+    "typecheck": "pass (elevated rerun)",
+    "functionalFocusedRegressions": "pass: raw drafts, exact custom vesting, fixed/percentage bonus semantics, cliffs, missing FX, correlation migration, monthly anchors, overview outcomes",
+    "fullFunctionalSuite": "pass: 20 files, 159 tests",
+    "browserAndAxe": "pass: 15/15 serial Playwright/Axe plus 3 standardized screenshot captures",
+    "reason": "Windows sandbox blocks esbuild/Chromium with spawn EPERM; all process-spawning gates above were run with the required elevated execution."
+  }
+}

@@ -6,6 +6,7 @@ test("acknowledges five worker cancellations under 100ms without late completion
   const latencies: number[] = [];
   for (let trial = 0; trial < 5; trial += 1) {
     await page.getByRole("button", { name: "Run 10,000 simulations" }).click();
+    await expect(page.getByRole("status", { name: "Risk simulation status" })).toContainText(/Simulation running: [1-9]/);
     await page.getByRole("button", { name: "Cancel simulation" }).click();
     const status = page.getByRole("status", { name: "Risk simulation status" });
     await expect(status).toContainText("Simulation cancelled");

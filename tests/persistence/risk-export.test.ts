@@ -24,6 +24,8 @@ describe("risk CSV", () => {
     expect(csv).toContain("p50_gross_minor,p50_tax_minor,p50_net_minor");
     expect(csv).toContain("equity:=ACME");
     expect(csv).toContain("selected_basis");
+    expect(csv).toContain("p10_gross_minor,p10_tax_minor,p10_net_minor,p25_gross_minor");
+    expect(csv).toContain("histogram_bin,min_minor,max_minor,count");
     expect(csv).not.toContain("1,200");
   });
 });

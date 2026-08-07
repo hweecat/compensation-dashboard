@@ -10,6 +10,14 @@ describe("cash schedules", () => {
     expect(rows[0]).toMatchObject({ date: "2027-01-31", grossSourceMinor: 1500000n });
     expect(rows.find(row => row.date === "2028-01-31")?.grossSourceMinor).toBe(1545000n);
   });
+  it("applies growth on the clamped February 28 anniversary after a leap-day start", () => {
+    const scenario = {
+      ...DEFAULT_SCENARIO,
+      projection: { ...DEFAULT_SCENARIO.projection, startDate: "2028-02-29", horizonYears: 2 },
+      salary: { ...DEFAULT_SCENARIO.salary, amountMinor: 1_200_000n, annualGrowth: 0.1 },
+    };
+    expect(buildSalaryEvents(scenario).find((row) => row.date === "2029-02-28")?.grossSourceMinor).toBe(110_000n);
+  });
   it("uses performance-year opening salary for percentage bonus", () => {
     expect(buildBonusEvents(DEFAULT_SCENARIO)[1]?.grossSourceMinor).toBe(2781000n);
   });
@@ -22,6 +30,23 @@ describe("cash schedules", () => {
     expect(events).toHaveLength(1);
     expect(events[0]).toMatchObject({ eventId: "fy28-2029-03-15", date: "2029-03-15" });
     expect(events[0].grossSourceMinor).toBe(2224800n);
+  });
+  it("applies achievement to a fixed bonus in its configured source currency", () => {
+    const scenario = {
+      ...DEFAULT_SCENARIO,
+      bonuses: [{ id: "fixed", performanceYear: 2027, mode: "fixed" as const, amountMinor: 9_007_199_254_740_993n, currency: "EUR", payoutDate: "2027-06-15", achievement: 0.5 }],
+    };
+
+    expect(buildBonusEvents(scenario as typeof DEFAULT_SCENARIO)).toEqual([expect.objectContaining({ grossSourceMinor: 4_503_599_627_370_496n, sourceCurrency: "EUR" })]);
+  });
+  it("uses the salary currency for a percentage-of-salary bonus", () => {
+    const scenario = {
+      ...DEFAULT_SCENARIO,
+      salary: { ...DEFAULT_SCENARIO.salary, currency: "USD" },
+      bonuses: [{ id: "percent", performanceYear: 2027, mode: "percent" as const, amount: 0.1, currency: "EUR", payoutDate: "2027-06-15", achievement: 1 }],
+    };
+
+    expect(buildBonusEvents(scenario)).toEqual([expect.objectContaining({ grossSourceMinor: 1800000n, sourceCurrency: "USD" })]);
   });
   it("allocates every minor unit to instalments", () => {
     expect(equalInstalments(1000n, "2028-01-31", 3).map(row => row.amountMinor)).toEqual([333n, 333n, 334n]);

@@ -279,8 +279,64 @@
 .fresh-export-panel button,
 .fresh-section-heading button,
 .fresh-tabs button,
-.fresh-segmented button {
+.fresh-segmented button,
+.fresh-input-group button,
+.fresh-manager button {
   min-height: 44px;
+}
+
+.fresh-manager {
+  display: grid;
+  gap: 20px;
+  max-width: 1600px;
+  margin: 20px auto 0;
+  padding: 0 clamp(18px, 4vw, 56px) 24px;
+}
+
+.fresh-manager-actions,
+.fresh-group-heading,
+.fresh-inline-actions {
+  display: flex;
+  gap: 10px;
+  align-items: end;
+  flex-wrap: wrap;
+}
+
+.fresh-manager-actions > label {
+  display: grid;
+  flex: 1 1 240px;
+  gap: 6px;
+  color: #4e655d;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.fresh-manager-actions input {
+  width: 100%;
+  min-height: 44px;
+  padding: 9px 11px;
+  border: 1px solid #c9d4cf;
+  border-radius: 8px;
+}
+
+.fresh-group-heading {
+  justify-content: space-between;
+}
+
+.fresh-inline-actions > button {
+  flex: 1 1 120px;
+}
+
+.fresh-custom-rows {
+  display: grid;
+  gap: 12px;
+}
+
+.fresh-custom-rows > div {
+  display: grid;
+  gap: 10px;
+  padding-block: 8px;
+  border-top: 1px solid #d9e0dc;
 }
 
 .fresh-tabs {
@@ -480,6 +536,32 @@
   background: #fff;
 }
 
+.fresh-risk-visuals {
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 1rem;
+}
+
+.fresh-risk-visuals h3 {
+  margin: 0;
+}
+
+.fresh-risk-chart {
+  border: 1px solid var(--line, #d7dee9);
+  border-radius: 0.7rem;
+  padding: 0.7rem;
+}
+
+.fresh-risk-chart svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.fresh-risk-chart p {
+  margin: 0.45rem 0 0;
+}
+
 .fresh-table-wrap table {
   width: 100%;
   min-width: 720px;
@@ -610,13 +692,18 @@
 
   .fresh-actions,
   .fresh-section-heading,
-  .fresh-mobile-summary {
+  .fresh-mobile-summary,
+  .fresh-manager-actions {
     flex-direction: column;
   }
 
   .fresh-actions button,
   .fresh-export-panel button,
   .fresh-section-heading button {
+    width: 100%;
+  }
+
+  .fresh-manager-actions > * {
     width: 100%;
   }
 

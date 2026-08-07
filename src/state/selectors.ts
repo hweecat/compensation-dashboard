@@ -17,8 +17,10 @@ export type PlannerView = Readonly<{
 export const buildPlannerView = (scenario: Scenario, options: PlannerViewOptions): PlannerView => {
   const ledger = buildLedger(scenario);
   const summary = aggregateLedger(ledger.rows, options);
-  const scopedComponent = options.scope?.component;
-  const taxRows = scopedComponent ? ledger.rows.filter((row) => row.component === scopedComponent) : ledger.rows;
+  const taxRows = ledger.rows.filter((row) =>
+    (!options.scope?.component || row.component === options.scope.component)
+    && (!options.scope?.grantId || row.grantId === options.scope.grantId),
+  );
   const totalTaxMinor = taxRows.reduce((sum, row) => sum + row.taxReportingMinor, 0n);
   return {
     ledger,

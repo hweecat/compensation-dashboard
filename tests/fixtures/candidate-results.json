@@ -31,7 +31,20 @@
   "grossMinor": "22139331",
   "taxMinor": "4440181",
   "netMinor": "17699150",
+  "seededRisk": {
+    "seed": 77,
+    "runs": 250,
+    "quantiles": {
+      "p10": "77298790",
+      "p25": "79270029",
+      "p50": "83115917",
+      "p75": "88452098",
+      "p90": "94369211"
+    },
+    "toleranceMinor": "1"
+  },
+  "seededRiskArtifactSha256": "9abd80ba66d4cd8e215c1c2fc75546077450933e0514f0d5070b721a67d47e9a",
   "engineVersion": "correctness-ledger-v2",
   "generatedBy": "npm run evidence:generate",
-  "generatedAt": "2026-07-14T08:08:48.294Z"
+  "generatedAt": "2026-07-21T02:35:16.547Z"
 }

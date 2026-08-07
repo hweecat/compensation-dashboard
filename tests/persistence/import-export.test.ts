@@ -12,6 +12,18 @@ describe("local import and export", () => {
     expect(() => importScenarioJson('{"schemaVersion":2}')).toThrow(/version/i);
   });
 
+  it("migrates schema-zero JSON and preserves value-mode grant input evidence", () => {
+    const valueModeScenario = {
+      ...DEFAULT_SCENARIO,
+      grants: [{
+        ...DEFAULT_SCENARIO.grants[0],
+        grantInput: { mode: "value" as const, originalValueMinor: 10_001n, residualMinor: 1n },
+      }],
+    };
+    const legacyJson = exportScenarioJson({ ...valueModeScenario, schemaVersion: 0 } as typeof valueModeScenario & { schemaVersion: 0 });
+    expect(importScenarioJson(legacyJson)).toEqual(valueModeScenario);
+  });
+
   it("neutralizes formula-like CSV cells", () => {
     expect(exportLedgerCsv(buildLedger(DEFAULT_SCENARIO).rows, "=scenario")).toContain("'=scenario");
   });

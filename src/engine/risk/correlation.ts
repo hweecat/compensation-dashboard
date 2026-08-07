@@ -15,9 +15,10 @@ export const cholesky = (matrix: readonly (readonly number[])[]) => {
       if (row === column) {
         if (pivot < -1e-12) throw new Error("Correlation matrix must be positive semidefinite");
         lower[row][column] = Math.sqrt(Math.max(0, pivot));
-      } else {
-        lower[row][column] = lower[column][column] === 0 ? 0 : pivot / lower[column][column];
-      }
+      } else if (lower[column][column] === 0) {
+        if (Math.abs(pivot) > 1e-12) throw new Error("Correlation matrix must be positive semidefinite");
+        lower[row][column] = 0;
+      } else lower[row][column] = pivot / lower[column][column];
     }
   }
   return lower;

@@ -1,4 +1,4 @@
-import { ScenarioSchema, type EventLedgerRow, type Scenario } from "../domain/schema";
+import { migrateScenarioDocument, type EventLedgerRow, type Scenario } from "../domain/schema";
 import type { RiskResult } from "../engine/risk/monteCarlo";
 
 const BIGINT_TAG = "$bigint";
@@ -9,9 +9,7 @@ const jsonReviver = (_key: string, value: unknown) => value && typeof value === 
 export const exportScenarioJson = (scenario: Scenario) => JSON.stringify(scenario, jsonReplacer, 2);
 
 export const importScenarioJson = (text: string): Scenario => {
-  const value = JSON.parse(text, jsonReviver) as { schemaVersion?: unknown };
-  if (value.schemaVersion !== 1) throw new Error(`Unsupported scenario version: ${String(value.schemaVersion)}`);
-  return ScenarioSchema.parse(value);
+  return migrateScenarioDocument(JSON.parse(text, jsonReviver));
 };
 
 const safeCell = (value: string) => {
@@ -26,12 +24,13 @@ export const exportLedgerCsv = (rows: readonly EventLedgerRow[], scenarioName = 
 };
 
 export const exportRiskSummaryCsv = (result: RiskResult) => {
-  const factorList = result.metadata.factors.join("|");
-  const first = result.histogram.at(0);
-  const last = result.histogram.at(-1);
-  return [
-    "seed,runs,selected_basis,p50_gross_minor,p50_tax_minor,p50_net_minor,probability_below_threshold,algorithm,factors,quantile_method,histogram_rule,engine_version,histogram_bins,histogram_min_minor,histogram_max_minor",
-    [result.metadata.seed, result.metadata.runs, result.selectedBasis, result.grossQuantiles.p50, result.taxQuantiles.p50, result.netQuantiles.p50, result.probabilityBelowThreshold, result.metadata.algorithm, factorList, result.metadata.quantileMethod, result.metadata.histogramRule, result.metadata.engineVersion, result.histogram.length, first?.min ?? "", last?.max ?? ""]
-      .map((value) => safeCell(String(value))).join(","),
-  ].join("\r\n");
+  const quantileHeader = ["p10", "p25", "p50", "p75", "p90"];
+  const quantileValues = (values: RiskResult["grossQuantiles"]) => [values.p10, values.p25, values.p50, values.p75, values.p90];
+  const summaryHeader = ["seed", "runs", "selected_basis", ...quantileHeader.flatMap((item) => [`${item}_gross_minor`, `${item}_tax_minor`, `${item}_net_minor`]), "deterministic_gross_minor", "deterministic_tax_minor", "deterministic_net_minor", "threshold_minor", "probability_below_threshold", "probability_below_deterministic", "algorithm", "factors", "factor_volatilities", "correlation", "quantile_method", "histogram_rule", "engine_version"];
+  const factorVolatilities = Object.entries(result.metadata.factorVolatilities ?? {}).sort(([left], [right]) => left.localeCompare(right)).map(([factor, volatility]) => `${factor}:${volatility}`).join("|");
+  const correlation = (result.metadata.correlation ?? []).map((row) => row.join("|")).join(";");
+  const summary = [result.metadata.seed, result.metadata.runs, result.selectedBasis, ...quantileHeader.flatMap((_, index) => [quantileValues(result.grossQuantiles)[index], quantileValues(result.taxQuantiles)[index], quantileValues(result.netQuantiles)[index]]), result.deterministicGrossMinor ?? "", result.deterministicTaxMinor ?? "", result.deterministicNetMinor ?? "", result.thresholdMinor ?? "", result.probabilityBelowThreshold, result.probabilityBelowDeterministic, result.metadata.algorithm, result.metadata.factors.join("|"), factorVolatilities, correlation, result.metadata.quantileMethod, result.metadata.histogramRule, result.metadata.engineVersion];
+  const histogram = result.histogram.map((bin, index) => [index + 1, bin.min, bin.max, bin.count]);
+  return [summaryHeader, summary, ["histogram_bin", "min_minor", "max_minor", "count"], ...histogram]
+    .map((record) => record.map((value) => safeCell(String(value))).join(",")).join("\r\n");
 };
