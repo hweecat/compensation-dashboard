@@ -232,6 +232,27 @@ describe("fresh canonical planner app", () => {
     expect(salary).toHaveValue(Number(DEFAULT_SCENARIO.salary.amountMinor) / 100);
   });
 
+  it("preserves multi-digit currency typing while live results update", () => {
+    render(<App />);
+    const salary = screen.getByLabelText(/Amount \(SGD\)/) as HTMLInputElement;
+    const initialTotal = screen.getByTestId("horizon-total").textContent;
+
+    act(() => salary.focus());
+    fireEvent.change(salary, { target: { value: "" } });
+    fireEvent.change(salary, { target: { value: "1" } });
+    expect(salary.value).toBe("1");
+
+    fireEvent.change(salary, { target: { value: "12" } });
+    expect(salary.value).toBe("12");
+
+    fireEvent.change(salary, { target: { value: "123" } });
+    expect(salary.value).toBe("123");
+    expect(screen.getByTestId("horizon-total").textContent).not.toBe(initialTotal);
+
+    fireEvent.keyDown(salary, { key: "Enter" });
+    expect(salary.value).toBe("123.00");
+  });
+
   it("keeps an incomplete date draft out of the canonical scenario until it is valid", () => {
     render(<App />);
     const startDate = screen.getByLabelText("Start date");

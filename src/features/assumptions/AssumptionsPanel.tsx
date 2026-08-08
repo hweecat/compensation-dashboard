@@ -47,16 +47,22 @@ function NumericDraftInput<T>({ label, value, parse, onCommit, onEmpty, ...input
   parse: (raw: string) => T | undefined;
   onCommit: (next: T) => void;
   onEmpty?: () => void;
-} & Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "onBlur">>) {
+} & Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "onBlur" | "onKeyDown">>) {
   const [draft, setDraft] = useState(value);
-  useEffect(() => setDraft(value), [value]);
-  return <label>{label}<input aria-label={label} {...input} value={draft} onChange={(event) => {
+  const [focused, setFocused] = useState(false);
+  useEffect(() => {
+    if (!focused) setDraft(value);
+  }, [focused, value]);
+  return <label>{label}<input aria-label={label} {...input} value={draft} onFocus={() => setFocused(true)} onKeyDown={(event) => {
+    if (event.key === "Enter") event.currentTarget.blur();
+  }} onChange={(event) => {
     const raw = event.currentTarget.value;
     setDraft(raw);
     const parsed = parse(raw);
     if (parsed !== undefined) onCommit(parsed);
     else if (raw === "") onEmpty?.();
   }} onBlur={() => {
+    setFocused(false);
     if (draft === "" && onEmpty) { onEmpty(); return; }
     const parsed = parse(draft);
     if (parsed === undefined) setDraft(value);
