@@ -3,6 +3,40 @@ import { DEFAULT_SCENARIO } from "../../src/domain/defaults";
 import { createMemoryScenarioRepository, migratePersistedScenario, shouldRestoreRecovery } from "../../src/persistence/database";
 
 describe("versioned named scenarios and recovery", () => {
+  it("uses a neutral company-equity identity in the built-in scenario", () => {
+    expect(DEFAULT_SCENARIO.equityAssets[0]).toMatchObject({ id: "company-equity", name: "Company equity" });
+    expect(DEFAULT_SCENARIO.grants.every((grant) => grant.assetId === "company-equity")).toBe(true);
+    expect(DEFAULT_SCENARIO.risk.volatilities["equity:company-equity"]).toBe(0.25);
+    expect(DEFAULT_SCENARIO.risk.correlationFactorIds).toContain("equity:company-equity");
+  });
+
+  it("migrates only the precisely identified legacy built-in sample", () => {
+    const legacy = {
+      ...DEFAULT_SCENARIO,
+      id: "public-sample",
+      baseline: true,
+      equityAssets: DEFAULT_SCENARIO.equityAssets.map((asset, index) => index === 0 ? { ...asset, id: "acme", name: "ACME" } : asset),
+      grants: DEFAULT_SCENARIO.grants.map((grant) => ({ ...grant, assetId: "acme" })),
+      risk: {
+        ...DEFAULT_SCENARIO.risk,
+        volatilities: { "equity:acme": 0.25, "fx:USD/SGD": 0.07 },
+        correlationFactorIds: DEFAULT_SCENARIO.risk.correlationFactorIds.map((factor) => factor === "equity:company-equity" ? "equity:acme" : factor),
+      },
+    };
+
+    const migrated = migratePersistedScenario(legacy);
+    expect(migrated.equityAssets[0]).toMatchObject({ id: "company-equity", name: "Company equity" });
+    expect(migrated.grants.every((grant) => grant.assetId === "company-equity")).toBe(true);
+    expect(migrated.risk.volatilities).toMatchObject({ "equity:company-equity": 0.25, "fx:USD/SGD": 0.07 });
+    expect(migrated.risk.volatilities["equity:acme"]).toBeUndefined();
+    expect(migrated.risk.correlationFactorIds).toContain("equity:company-equity");
+    expect(migrated.risk.correlation).toEqual(legacy.risk.correlation);
+
+    const userScenario = migratePersistedScenario({ ...legacy, id: "offer-a", baseline: false });
+    expect(userScenario.equityAssets[0]).toMatchObject({ id: "acme", name: "ACME" });
+    expect(userScenario.risk.volatilities["equity:acme"]).toBe(0.25);
+  });
+
   it("keeps immutable named revisions separate from recovery drafts", async () => {
     const repository = createMemoryScenarioRepository();
     const first = await repository.saveNamed(DEFAULT_SCENARIO);

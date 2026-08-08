@@ -28,12 +28,12 @@ describe("ScenarioSchema", () => {
       ...DEFAULT_SCENARIO,
       risk: {
         ...DEFAULT_SCENARIO.risk,
-        volatilities: { "equity:acme": 0.3, "fx:USD/SGD": 0.08 },
+        volatilities: { "equity:company-equity": 0.3, "fx:USD/SGD": 0.08 },
         thresholdMinor: 10_000n,
         correlation: [[1, 0.25], [0.25, 1]],
       },
     });
-    expect(configured.risk.volatilities["equity:acme"]).toBe(0.3);
+    expect(configured.risk.volatilities["equity:company-equity"]).toBe(0.3);
     expect(configured.risk.thresholdMinor).toBe(10_000n);
     expect(() => ScenarioSchema.parse({
       ...configured,

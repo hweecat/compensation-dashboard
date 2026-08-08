@@ -71,9 +71,25 @@ export type EventLedgerRow = Readonly<{ eventId: string; date: ISODate; monthKey
 
 export const migrateScenarioDocument = (value: unknown): Scenario => {
   if (!value || typeof value !== "object") throw new Error("Scenario document is invalid");
-  const candidate = structuredClone(value) as { schemaVersion?: unknown; grants?: unknown; bonuses?: unknown };
+  const candidate = structuredClone(value) as { schemaVersion?: unknown; id?: unknown; baseline?: unknown; equityAssets?: unknown; grants?: unknown; bonuses?: unknown; risk?: unknown };
   if (candidate.schemaVersion === 0) candidate.schemaVersion = 1;
   if (candidate.schemaVersion !== 1) throw new Error(`Unsupported scenario version: ${String(candidate.schemaVersion)}`);
+  const assets = Array.isArray(candidate.equityAssets) ? candidate.equityAssets : [];
+  const isLegacyBuiltInSample = candidate.id === "public-sample" && candidate.baseline === true && assets.some((asset) => asset && typeof asset === "object" && (asset as { id?: unknown }).id === "acme" && (asset as { name?: unknown }).name === "ACME");
+  if (isLegacyBuiltInSample) {
+    candidate.equityAssets = assets.map((asset) => asset && typeof asset === "object" && (asset as { id?: unknown }).id === "acme" && (asset as { name?: unknown }).name === "ACME" ? { ...asset, id: "company-equity", name: "Company equity" } : asset);
+    if (Array.isArray(candidate.grants)) candidate.grants = candidate.grants.map((grant) => grant && typeof grant === "object" && (grant as { assetId?: unknown }).assetId === "acme" ? { ...grant, assetId: "company-equity" } : grant);
+    if (candidate.risk && typeof candidate.risk === "object") {
+      const risk = candidate.risk as { volatilities?: unknown; correlationFactorIds?: unknown };
+      if (risk.volatilities && typeof risk.volatilities === "object" && Object.prototype.hasOwnProperty.call(risk.volatilities, "equity:acme")) {
+        const volatilities = { ...(risk.volatilities as Record<string, unknown>) };
+        volatilities["equity:company-equity"] = volatilities["equity:acme"];
+        delete volatilities["equity:acme"];
+        risk.volatilities = volatilities;
+      }
+      if (Array.isArray(risk.correlationFactorIds)) risk.correlationFactorIds = risk.correlationFactorIds.map((factor) => factor === "equity:acme" ? "equity:company-equity" : factor);
+    }
+  }
   if (Array.isArray(candidate.grants)) candidate.grants = candidate.grants.map((grant) => {
     if (!grant || typeof grant !== "object") return grant;
     const next = grant as { vesting?: { kind?: unknown; mode?: unknown; rows?: unknown } };

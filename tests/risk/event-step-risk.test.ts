@@ -8,13 +8,13 @@ describe("event-step compensation risk", () => {
   const ledger = buildLedger(DEFAULT_SCENARIO);
   const configuredScenario = {
     ...DEFAULT_SCENARIO,
-    risk: { ...DEFAULT_SCENARIO.risk, volatilities: { "equity:acme": 0.31, "fx:USD/SGD": 0.09 } },
+    risk: { ...DEFAULT_SCENARIO.risk, volatilities: { "equity:company-equity": 0.31, "fx:USD/SGD": 0.09 } },
   };
   const snapshot = buildRiskSnapshot(configuredScenario, ledger.rows);
 
   it("derives sorted equity and FX factors from the canonical ledger", () => {
     expect(snapshot.factors.map((factor) => factor.id)).toEqual([
-      "equity:acme",
+      "equity:company-equity",
       "fx:USD/SGD",
     ]);
     expect(snapshot.events).toHaveLength(ledger.rows.length);
@@ -57,10 +57,10 @@ describe("event-step compensation risk", () => {
       ...configuredScenario,
       salary: { ...configuredScenario.salary, currency: "EUR" },
       equityAssets: [...configuredScenario.equityAssets, { id: "euro", name: "Euro asset", currency: "EUR", priceAtAnchor: 20, anchorDate: "2027-01-01", annualGrowth: 0.05 }],
-      risk: { ...configuredScenario.risk, correlationFactorIds: ["equity:acme", "equity:euro", "fx:EUR/SGD", "fx:USD/SGD"], correlation: [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]] },
+      risk: { ...configuredScenario.risk, correlationFactorIds: ["equity:company-equity", "equity:euro", "fx:EUR/SGD", "fx:USD/SGD"], correlation: [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]] },
     };
     expect(buildRiskSnapshot(expanded, buildLedger(expanded).rows).factors.map((factor) => factor.id)).toEqual([
-      "equity:acme",
+      "equity:company-equity",
       "equity:euro",
       "fx:EUR/SGD",
       "fx:USD/SGD",
@@ -116,7 +116,7 @@ describe("event-step compensation risk", () => {
   it("blocks risk rather than silently replacing a stale factor correlation with identity", () => {
     const stale = {
       ...configuredScenario,
-      risk: { ...configuredScenario.risk, correlationFactorIds: ["equity:acme", "fx:USD/SGD"], correlation: [[1, 0.4], [0.4, 1]] },
+      risk: { ...configuredScenario.risk, correlationFactorIds: ["equity:company-equity", "fx:USD/SGD"], correlation: [[1, 0.4], [0.4, 1]] },
       equityAssets: [...configuredScenario.equityAssets, { id: "euro", name: "Euro asset", currency: "EUR", priceAtAnchor: 20, anchorDate: "2027-01-01", annualGrowth: 0.05 }],
     };
 

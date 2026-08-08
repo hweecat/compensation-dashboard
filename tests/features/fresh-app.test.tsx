@@ -68,7 +68,7 @@ describe("fresh canonical planner app", () => {
     render(<App />);
     fireEvent.click(screen.getByRole("tab", { name: "Risk" }));
     fireEvent.click(screen.getByRole("button", { name: "Run 10,000 simulations" }));
-    expect(messages[0]).toMatchObject({ type: "run", snapshot: { factors: [{ id: "equity:acme" }, { id: "fx:USD/SGD" }] }, options: { runs: 10_000 } });
+    expect(messages[0]).toMatchObject({ type: "run", snapshot: { factors: [{ id: "equity:company-equity" }, { id: "fx:USD/SGD" }] }, options: { runs: 10_000 } });
     expect(screen.getByRole("button", { name: "Cancel simulation" })).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Cancel simulation" }));
     expect(messages[1]).toMatchObject({ type: "cancel" });
@@ -374,9 +374,9 @@ describe("fresh canonical planner app", () => {
     fireEvent.click(screen.getByRole("button", { name: "Generate missing FX pairs" }));
     expect(screen.getByRole("button", { name: "Undo generated FX pairs" })).toBeVisible();
     fireEvent.click(screen.getByRole("tab", { name: "Risk" }));
-    expect(screen.getByLabelText("Volatility equity:acme (%)")).toBeVisible();
-    expect(screen.getByLabelText("Volatility equity:asset-2 (%)")).toBeVisible();
-    expect(screen.getByLabelText("Volatility fx:EUR/SGD (%)")).toBeVisible();
+    expect(screen.getByLabelText("Equity volatility — Company equity (%)")).toBeVisible();
+    expect(screen.getByLabelText("Equity volatility — Asset 2 (%)")).toBeVisible();
+    expect(screen.getByLabelText("FX volatility — EUR/SGD (%)")).toBeVisible();
     expect(screen.getByRole("table", { name: "Risk correlation matrix" })).toBeVisible();
   });
 });
