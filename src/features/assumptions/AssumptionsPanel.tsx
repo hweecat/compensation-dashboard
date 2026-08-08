@@ -3,7 +3,7 @@ import type { Scenario, SourceComponent } from "../../domain/schema";
 import { addAnchoredMonths } from "../../engine/dates";
 import { grantSharesFromValue, repriceValueModeGrants } from "../../state/scenarioCommands";
 import { equalInstalments } from "../../engine/schedules/signOn";
-import { requiredSourceCurrencies, riskFactorIds as deriveRiskFactorIds } from "../../engine/risk/factors";
+import { requiredSourceCurrencies, riskFactorDisplayName, riskFactorIds as deriveRiskFactorIds } from "../../engine/risk/factors";
 import { FULL_PERCENT, PERCENT_SCALE, percentMicroUnits } from "../../domain/percent";
 import { decimalDraftToMinor, formatMinorExact, minorToDecimalDraft } from "../../domain/money";
 import { percentToDraft } from "../../domain/rate";
@@ -289,7 +289,8 @@ export function AssumptionsPanel({ scenario, setScenario, activeTab }: Readonly<
       <NumericDraftInput label={`Compensation threshold (${reportingCurrency})`} type="number" min="0" placeholder="Optional" value={scenario.risk.thresholdMinor === undefined ? "" : minorToDecimalDraft(scenario.risk.thresholdMinor)} parse={(raw) => raw === "" ? undefined : minorDraft(raw)} onEmpty={() => setScenario({ ...scenario, risk: { ...scenario.risk, thresholdMinor: undefined } })} onCommit={(thresholdMinor) => setScenario({ ...scenario, risk: { ...scenario.risk, thresholdMinor } })} />
       {riskFactorIds.map((factor) => {
         const volatility = scenario.risk.volatilities[factor] ?? (factor.startsWith("equity:") ? 0.25 : 0.07);
-        return <NumericDraftInput key={factor} label={`Volatility ${factor} (%)`} type="number" min="0" max="500" step="0.1" value={percentToDraft(volatility)} parse={(raw) => { const value = finiteNumber(0, 500)(raw); return value === undefined ? undefined : value / 100; }} onCommit={(value) => setScenario({ ...scenario, risk: { ...scenario.risk, volatilities: { ...scenario.risk.volatilities, [factor]: value } } })} />;
+        const label = `${riskFactorDisplayName(scenario, factor).replace(" — ", " volatility — ")} (%)`;
+        return <NumericDraftInput key={factor} label={label} type="number" min="0" max="500" step="0.1" value={percentToDraft(volatility)} parse={(raw) => { const value = finiteNumber(0, 500)(raw); return value === undefined ? undefined : value / 100; }} onCommit={(value) => setScenario({ ...scenario, risk: { ...scenario.risk, volatilities: { ...scenario.risk.volatilities, [factor]: value } } })} />;
       })}
       <RiskCorrelationEditor scenario={scenario} setScenario={setScenario} factors={riskFactorIds} />
       <p className="input-note">Uses a versioned seeded engine. Editing assumptions invalidates the displayed simulation.</p>
@@ -298,6 +299,7 @@ export function AssumptionsPanel({ scenario, setScenario, activeTab }: Readonly<
 }
 
 function RiskCorrelationEditor({ scenario, setScenario, factors }: Readonly<{ scenario: Scenario; setScenario: (scenario: Scenario) => void; factors: readonly string[] }>) {
+  const factorNames = factors.map((factor) => riskFactorDisplayName(scenario, factor));
   const configuredIds = scenario.risk.correlationFactorIds;
   const matrixMatches = scenario.risk.correlation.length === configuredIds.length && scenario.risk.correlation.every((row) => row.length === configuredIds.length);
   const idsMatchFactors = configuredIds.length === factors.length && configuredIds.every((id) => factors.includes(id));
@@ -316,7 +318,7 @@ function RiskCorrelationEditor({ scenario, setScenario, factors }: Readonly<{ sc
     next[column][row] = value;
     setScenario({ ...scenario, risk: { ...scenario.risk, correlationFactorIds: [...factors], correlation: next } });
   };
-  return <>{requiresMigration && <div className="fresh-array-item" role="status"><p>Correlation factor mapping needs migration. This preview preserves correlations for known factor IDs and assigns zero correlation to newly added factors until you review it.</p><button type="button" onClick={() => setScenario({ ...scenario, risk: { ...scenario.risk, correlationFactorIds: [...factors], correlation: preview } })}>Apply correlation factor migration</button></div>}<table aria-label="Risk correlation matrix"><thead><tr><th scope="col">Factor</th>{factors.map((factor) => <th scope="col" key={factor}>{factor}</th>)}</tr></thead><tbody>{factors.map((factor, row) => <tr key={factor}><th scope="row">{factor}</th>{factors.map((columnFactor, column) => <td key={columnFactor}>{row === column ? <span aria-label={`${factor} self correlation`}>100%</span> : <NumericDraftInput aria-label={`${factor} to ${columnFactor} correlation (%)`} label={`${factor} to ${columnFactor} correlation (%)`} type="number" min="-100" max="100" step="1" value={percentToDraft(valueAt(row, column))} parse={(raw) => finiteNumber(-100, 100)(raw)} onCommit={(percent) => setCorrelation(row, column, percent / 100)} />}</td>)}</tr>)}</tbody></table>
+  return <>{requiresMigration && <div className="fresh-array-item" role="status"><p>Correlation factor mapping needs migration. This preview preserves correlations for known factor IDs and assigns zero correlation to newly added factors until you review it.</p><button type="button" onClick={() => setScenario({ ...scenario, risk: { ...scenario.risk, correlationFactorIds: [...factors], correlation: preview } })}>Apply correlation factor migration</button></div>}<table aria-label="Risk correlation matrix"><thead><tr><th scope="col">Factor</th>{factors.map((factor, index) => <th scope="col" key={factor}>{factorNames[index]}</th>)}</tr></thead><tbody>{factors.map((factor, row) => <tr key={factor}><th scope="row">{factorNames[row]}</th>{factors.map((columnFactor, column) => <td key={columnFactor}>{row === column ? <span aria-label={`${factorNames[row]} self correlation`}>100%</span> : <NumericDraftInput aria-label={`${factorNames[row]} to ${factorNames[column]} correlation (%)`} label={`${factorNames[row]} to ${factorNames[column]} correlation (%)`} type="number" min="-100" max="100" step="1" value={percentToDraft(valueAt(row, column))} parse={(raw) => finiteNumber(-100, 100)(raw)} onCommit={(percent) => setCorrelation(row, column, percent / 100)} />}</td>)}</tr>)}</tbody></table>
     <button type="button" onClick={() => setScenario({ ...scenario, risk: { ...scenario.risk, correlationFactorIds: [...factors], correlation: Array.from({ length: factors.length }, (_, row) => Array.from({ length: factors.length }, (_, column) => row === column ? 1 : 0)) } })}>Reset correlations</button>
   </>;
 }

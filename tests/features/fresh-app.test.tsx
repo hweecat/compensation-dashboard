@@ -349,6 +349,21 @@ describe("fresh canonical planner app", () => {
     expect(screen.getByRole("table", { name: "Equity assumptions" })).toBeVisible();
   });
 
+  it("uses human-readable risk factor labels instead of internal identifiers", () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole("tab", { name: "Equity" }));
+    const assetName = screen.getAllByLabelText("Asset name")[0];
+    fireEvent.change(assetName, { target: { value: "Company equity" } });
+    fireEvent.blur(assetName);
+
+    fireEvent.click(screen.getByRole("tab", { name: "Risk" }));
+    expect(screen.getByLabelText("Equity volatility — Company equity (%)")).toBeVisible();
+    expect(screen.getByLabelText("FX volatility — USD/SGD (%)")).toBeVisible();
+    expect(screen.getByRole("columnheader", { name: "Equity — Company equity" })).toBeVisible();
+    expect(screen.getByRole("rowheader", { name: "FX — USD/SGD" })).toBeVisible();
+    expect(screen.queryByText(/equity:/i)).not.toBeInTheDocument();
+  });
+
   it("previews generated FX assumptions with undo and exposes every risk factor", () => {
     render(<App />);
     fireEvent.change(screen.getByLabelText("Salary currency"), { target: { value: "EUR" } });
