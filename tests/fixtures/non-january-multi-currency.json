@@ -1,0 +1,148 @@
+{
+  "schemaVersion": 1,
+  "fixtureId": "non-january-multi-currency",
+  "description": "Public deterministic evidence fixture anchored on a non-January start date.",
+  "scenario": {
+    "schemaVersion": 1,
+    "id": "public-non-january-multi-currency",
+    "name": "Public non-January multi-currency fixture",
+    "baseline": true,
+    "projection": {
+      "startDate": "2027-07-15",
+      "horizonYears": 2,
+      "reportingCurrency": "SGD",
+      "displayPrecision": "unit"
+    },
+    "salary": {
+      "amountMinor": "1000001",
+      "frequency": "annual",
+      "currency": "SGD",
+      "annualGrowth": 0.03
+    },
+    "bonuses": [
+      {
+        "id": "bonus-usd",
+        "performanceYear": 2027,
+        "mode": "fixed",
+        "amount": 125000,
+        "currency": "USD",
+        "payoutDate": "2028-07-14",
+        "achievement": 1
+      }
+    ],
+    "signOns": [
+      {
+        "id": "signon",
+        "label": "Sign-on",
+        "totalMinor": "120001",
+        "currency": "SGD",
+        "schedule": {
+          "kind": "instalments",
+          "startDate": "2027-07-31",
+          "count": 3
+        }
+      },
+      {
+        "id": "pre-window",
+        "label": "Excluded before",
+        "totalMinor": "5000",
+        "currency": "SGD",
+        "schedule": {
+          "kind": "lump",
+          "date": "2027-07-14"
+        }
+      },
+      {
+        "id": "post-window",
+        "label": "Excluded after",
+        "totalMinor": "7000",
+        "currency": "SGD",
+        "schedule": {
+          "kind": "lump",
+          "date": "2029-07-15"
+        }
+      }
+    ],
+    "equityAssets": [
+      {
+        "id": "acme",
+        "name": "ACME",
+        "currency": "USD",
+        "priceAtAnchor": 50,
+        "anchorDate": "2027-07-15",
+        "annualGrowth": 0.08
+      }
+    ],
+    "grants": [
+      {
+        "id": "grant-a",
+        "name": "Initial grant",
+        "assetId": "acme",
+        "grantDate": "2027-07-15",
+        "shares": "1200",
+        "vesting": {
+          "kind": "preset",
+          "durationMonths": 36,
+          "cadenceMonths": 12,
+          "cliffMonths": 12
+        }
+      }
+    ],
+    "tax": {
+      "mode": "component",
+      "blendedRate": 0.2,
+      "byComponent": {
+        "salary": 0.18,
+        "bonus": 0.2,
+        "signOn": 0.15,
+        "equity": 0.22
+      }
+    },
+    "fxPairs": [
+      {
+        "base": "USD",
+        "quote": "SGD",
+        "rateAtAnchor": 1.35,
+        "anchorDate": "2027-07-15",
+        "annualDrift": 0.01
+      }
+    ],
+    "risk": {
+      "seed": 42,
+      "correlation": [
+        [
+          1
+        ]
+      ]
+    }
+  },
+  "expected": {
+    "eventCount": 33,
+    "includedCount": 29,
+    "excludedCount": 4,
+    "componentTotals": {
+      "salary": {
+        "grossMinor": "2030002",
+        "taxMinor": "365402",
+        "netMinor": "1664600"
+      },
+      "bonus": {
+        "grossMinor": "17043637",
+        "taxMinor": "3408727",
+        "netMinor": "13634910"
+      },
+      "signOn": {
+        "grossMinor": "120001",
+        "taxMinor": "18000",
+        "netMinor": "102001"
+      },
+      "equity": {
+        "grossMinor": "2945691",
+        "taxMinor": "648052",
+        "netMinor": "2297639"
+      }
+    },
+    "ledgerHash": "60ee6b39d46c52cfd60d013032aa192a9554d848965227c08be1712cbb21763d",
+    "fixtureHash": "dd79937786ce80198949c7f5fb8637797ffc4da311648d02168878e9fdd33e0e"
+  }
+}

@@ -7,18 +7,24 @@
     "build": "vite build",
     "dev": "vite",
     "preview": "vite preview",
-    "test": "node tests/public-defaults.spec.cjs && node tests/source-layout.spec.cjs && node tests/html-structure.spec.cjs && node tests/style-structure.spec.cjs && node tests/dashboard.spec.cjs && node tests/file-module-load.cjs",
+    "test": "npm run test:structure && npm run test:vitest",
     "test:structure": "node tests/public-defaults.spec.cjs && node tests/source-layout.spec.cjs && node tests/html-structure.spec.cjs && node tests/style-structure.spec.cjs",
-    "test:browser": "node tests/dashboard.spec.cjs && node tests/file-module-load.cjs",
-    "test:vitest": "vitest run",
+    "test:browser": "playwright test tests/e2e tests/accessibility",
+    "test:vitest": "vitest run --exclude tests/performance/**",
+    "test:e2e": "playwright test tests/e2e",
+    "test:a11y": "playwright test tests/accessibility",
+    "benchmark:risk": "vitest run tests/performance/risk-benchmark.test.ts",
+    "evidence:generate": "node scripts/generate-engine-evidence.mjs",
     "postinstall": "playwright install chromium"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.10.2",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^5.2.0",
+    "fast-check": "^4.3.0",
     "jsdom": "^25.0.1",
     "lightningcss": "^1.32.0",
     "playwright": "1.61.1",
@@ -27,7 +33,13 @@
     "vitest": "^2.1.9"
   },
   "dependencies": {
+    "@js-temporal/polyfill": "^0.5.1",
+    "@visx/scale": "^3.12.0",
+    "@visx/shape": "^3.12.0",
+    "decimal.js": "^10.6.0",
+    "idb": "^8.0.3",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "zod": "^3.25.0"
   }
 }
