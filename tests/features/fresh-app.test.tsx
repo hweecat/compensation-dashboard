@@ -148,7 +148,7 @@ describe("fresh canonical planner app", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Equity" }));
     const included = document.querySelector<HTMLElement>('[aria-label^="Included vesting events"]');
     expect(included).toHaveTextContent("Initial grant");
-    expect(included).not.toHaveTextContent("Refresh grant");
+    expect(included).not.toHaveTextContent("Refresh grant 1");
   });
 
   it("does not show partial calculated outcomes when an active FX pair is missing", () => {
@@ -182,7 +182,7 @@ describe("fresh canonical planner app", () => {
     fireEvent.click(screen.getByRole("button", { name: "Add asset" }));
     expect(screen.getByRole("button", { name: /Delete asset Asset 2/ })).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Add grant" }));
-    expect(screen.getByRole("button", { name: /Duplicate grant Grant 3/ })).toBeVisible();
+    expect(screen.getByRole("button", { name: /Duplicate grant Refresh grant 2/ })).toBeVisible();
     fireEvent.click(screen.getAllByRole("button", { name: "Enter value" }).at(-1)!);
     expect(screen.getAllByLabelText("Grant value").at(-1)).toBeVisible();
     const duration = screen.getAllByLabelText("Duration").at(-1)!;
@@ -192,6 +192,17 @@ describe("fresh canonical planner app", () => {
     expect(screen.getAllByLabelText("Custom vest input mode").at(-1)).toBeVisible();
     fireEvent.click(screen.getAllByRole("button", { name: "Add vest row" }).at(-1)!);
     expect(screen.getAllByLabelText("Vest date").length).toBeGreaterThan(1);
+  });
+
+  it("reuses the lowest available refresh-grant number after deletion", () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole("tab", { name: "Equity" }));
+    fireEvent.click(screen.getAllByRole("button", { name: /Delete grant/ })[1]);
+    fireEvent.click(screen.getByRole("button", { name: "Add grant" }));
+
+    expect(screen.getAllByLabelText("Grant name").at(-1)).toHaveValue("Refresh grant 1");
+    expect(screen.getByRole("button", { name: "Duplicate grant Refresh grant 1" })).toBeVisible();
+    expect(screen.queryByDisplayValue("Grant 2")).not.toBeInTheDocument();
   });
 
   it("keeps custom vest drafts valid while editing one row", () => {

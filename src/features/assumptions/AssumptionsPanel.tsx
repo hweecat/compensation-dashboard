@@ -7,6 +7,7 @@ import { requiredSourceCurrencies, riskFactorDisplayName, riskFactorIds as deriv
 import { FULL_PERCENT, PERCENT_SCALE, percentMicroUnits } from "../../domain/percent";
 import { decimalDraftToMinor, formatMinorExact, minorToDecimalDraft } from "../../domain/money";
 import { percentToDraft } from "../../domain/rate";
+import { nextRefreshGrantName } from "../../domain/grantNames";
 
 type TabKey = "overview" | "cash" | "equity" | "taxfx" | "risk";
 type PresetVesting = Extract<Scenario["grants"][number]["vesting"], { kind: "preset" }>;
@@ -166,7 +167,8 @@ export function AssumptionsPanel({ scenario, setScenario, activeTab }: Readonly<
     const id = uniqueId("grant", scenario.grants.map((item) => item.id));
     const assetId = scenario.equityAssets[0]?.id;
     if (!assetId) return;
-    setScenario({ ...scenario, grants: [...scenario.grants, { id, name: `Grant ${scenario.grants.length + 1}`, assetId, grantDate: scenario.projection.startDate, shares: 1000n, grantInput: { mode: "shares" }, vesting: { kind: "preset", durationMonths: 48, cadenceMonths: 3, cliffMonths: 12, cliffMode: "catchUp" } }] });
+    const name = nextRefreshGrantName(scenario.grants.map((grant) => grant.name));
+    setScenario({ ...scenario, grants: [...scenario.grants, { id, name, assetId, grantDate: scenario.projection.startDate, shares: 1000n, grantInput: { mode: "shares" }, vesting: { kind: "preset", durationMonths: 48, cadenceMonths: 3, cliffMonths: 12, cliffMode: "catchUp" } }] });
   };
   const updateGrant = (index: number, patch: Partial<Scenario["grants"][number]>) => setScenario({ ...scenario, grants: scenario.grants.map((item, candidate) => candidate === index ? { ...item, ...patch } as Scenario["grants"][number] : item) });
 
